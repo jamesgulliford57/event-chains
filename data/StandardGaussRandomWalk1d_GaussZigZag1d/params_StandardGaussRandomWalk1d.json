@@ -1,0 +1,13 @@
+{
+    "N": 100000,
+    "class": "StandardGaussRandomWalk1d",
+    "x0": 0.0,
+    "sigma_prop": 2.38,
+    "dim": 1,
+    "acceptance_rate": 0.44259,
+    "mu_pi": 0,
+    "sigma_pi": 1,
+    "msd": 0.9932663791289429,
+    "iat": 6.859294100528952,
+    "eff_sample_size": 14578.759641212722
+}

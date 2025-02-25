@@ -1,0 +1,13 @@
+{
+    "N": 100000,
+    "final_time": 100000,
+    "class": "GaussZigZag2d",
+    "x0": [
+        0.0,
+        0.0
+    ],
+    "poisson_thinned": false,
+    "msd": 1.0059986400795127,
+    "iat": 3.661485309368611,
+    "eff_sample_size": 54622.64166082047
+}
