@@ -98,17 +98,3 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     main(args.config)
-
-"""
-To do:
-- Replace long arguments in classes with *args, **kwargs (learn how to do this well)
-- Fix thinned events occured print business
-- Print summary table as found in PX912 assignment really detailed output
-- Streamline json read/writing into one function
-- Shouldn't have to put dimension in explictly, infer it from method selected
-- Test on function and class inputs to protect against nonsensical inputs
-- Streamline plotting functions
-- Good way to determine what final time should be used
-- Convert config file to ini if number of controls is going to be too high
-- Check norm x^2+y^2 CDF
-"""
