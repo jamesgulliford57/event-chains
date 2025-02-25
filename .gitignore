@@ -1,0 +1,14 @@
+# Ignore Python compiled files
+__pycache__/
+*.pyc
+
+# Ignore logs and temporary files
+*.log
+*.tmp
+
+# Ignore local environment and IDE settings
+.vscode/
+*.swp
+
+# Ignore specific folders
+archive/
