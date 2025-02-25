@@ -1,15 +1,19 @@
-# Ignore Python compiled files
+# Python compiled files
 __pycache__/
 *.pyc
 
-# Ignore logs and temporary files
+# Fortran module files
+*.mod
+*.smod
+
+# Logs and temporary files
 *.log
 *.tmp
 
-# Ignore local environment and IDE settings
+# :ocal environment and IDE settings
 .vscode/
 *.swp
 
-# Ignore specific folders
+# Specific folders
 archive/
 admin/
