@@ -5,6 +5,24 @@ from utils import write_npy, write_json, timer
 
 class RandomWalk:
     def __init__(self, num_samples, x0, sigma_prop, dim, pi, **pi_params):
+        """
+        Simulated a random walk with a given target distribution.
+        
+        Parameters:
+        ---
+        num_samples : int
+            Number of samples to simulate.
+        x0 : float, list
+            Initial state of the random walk.
+        sigma_prop : float
+            Standard deviation of the proposal distribution.
+        dim : int
+            Dimension of the random walk.
+        pi : function
+            Target distribution.
+        pi_params : dict
+            Parameters of the target distribution.
+        """
         self.num_samples = num_samples
         self.x0 = x0
         self.samples = np.zeros((dim, num_samples))
@@ -17,16 +35,43 @@ class RandomWalk:
             setattr(self, key, value)  
 
     def proposal(self, x):
-        return np.random.normal(x, self.sigma_prop) # 2.38 = optimal proposals for minimising IAT
+        """
+        Random walk proposal distribution.
+
+        Parameters:
+        ---
+        x : float, list
+            Current state of the random walk.
+        """
+        return np.random.normal(x, self.sigma_prop) 
 
     def acc_prob(self, x, y):
+        """
+        Random walk acceptance probability.
+        
+        Parameters:
+        ---
+        x : float, list
+            Current state of the random walk.
+        y : float, list
+            Proposed state of the random walk.
+        """
         return min(1, self.pi(y) / self.pi(x))
 
     @timer
     def sim(self, output_dir):
+        """
+        Perform random walk simulation.
+    
+        Parameters:
+        ---
+        output_dir : str
+            Directory to save output files.
+        """
+
         print(f"\nInititaing RW simulation with N = {self.num_samples}...")
+
         accepted = 0
-        sim_params = {}
         for i in range(1,self.num_samples):
             if i % 10000 == 0:
                 print(f'Simulation {i} complete')
@@ -36,7 +81,9 @@ class RandomWalk:
                 accepted += 1
             else:
                 self.samples[:, i] = self.samples[:, i - 1]
+
         print("RW simulation complete. Performing analysis...")
+
         # Write samples to numpy file
         class_name = self.__class__.__name__
         write_npy(output_dir, **{f"samples_{class_name}": self.samples})

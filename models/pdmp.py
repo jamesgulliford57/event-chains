@@ -6,7 +6,7 @@ from utils import write_npy, write_json, timer
 class PDMP:
     def __init__(self, num_samples, final_time, event_time_func, x0=0.0, v0=1, dim=1, poisson_thinned=False, event_rate=None, event_rate_bound=None, **pi_params):
         """
-        Superclass Piecewise Deterministic Markov Process (PDMP) 
+        Simulates a Piecewise Deterministic Markov Process (PDMP).
         
         Parameters
         ---
@@ -37,6 +37,9 @@ class PDMP:
             setattr(self, key, value) 
 
     def _find_next_event_time(self):
+        """
+        Returns the time until the next event and the component of the state to flip.
+        """
         # If using Poisson thinned event rate call upper bound rate function
         if self.poisson_thinned:
             lambda_rate_bound = self.event_rate_bound()
@@ -46,11 +49,24 @@ class PDMP:
             return self.event_time_func()
     
     def thinned_acceptance_prob(self):
+        """
+        Returns the acceptance probability when using Poisson thinning.
+        """
         return self.event_rate() / self.event_rate_bound()
     
     @timer
     def sim(self, output_dir):
+        """
+        Performs the PDMP simulation.
+        
+        Parameters
+        ---
+        output_dir: str
+            Directory to save output files.
+        """
+
         print(f"\nInitiating PDMP simulation with final_time = {self.final_time}...")
+        
         time = 0.0
         events = 0
         event_times = []
@@ -99,4 +115,3 @@ class PDMP:
             params['thinning_acceptance_rate'] = acceptance_rate
         write_json(output_dir, **{f"params_{class_name}": params})
         #write_npy(output_dir, pdmp_samples=samples) (Delete when worked out don't need)
-        

@@ -1,11 +1,11 @@
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-plt.rcParams['agg.path.chunksize'] = 10000
 import json
 from utils import write_npy
 
 plt.style.use('seaborn-v0_8-darkgrid')
+plt.rcParams['agg.path.chunksize'] = 10000
 
 def get_directory(file_path):
     """
