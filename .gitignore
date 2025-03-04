@@ -17,3 +17,4 @@ __pycache__/
 # Specific folders
 archive/
 admin/
+data/

@@ -1,12 +1,14 @@
 {
     "N": 100000,
-    "final_time": 1000000,
+    "final_time": 100000,
     "class": "GaussZigZag1d",
-    "x0": 0.0,
+    "x0": [
+        0.0
+    ],
     "poisson_thinned": false,
     "mu_pi": 0,
     "sigma_pi": 1,
-    "msd": 1.0015340696172916,
-    "iat": 2.984105616648714,
-    "eff_sample_size": 33510.87824843966
+    "msd": 0.0,
+    "iat": -4.503599627370496e+17,
+    "eff_sample_size": 0
 }

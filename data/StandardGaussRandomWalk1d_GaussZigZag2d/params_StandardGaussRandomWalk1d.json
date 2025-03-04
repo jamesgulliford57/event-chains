@@ -4,10 +4,10 @@
     "x0": 0.0,
     "sigma_prop": 2.38,
     "dim": 1,
-    "acceptance_rate": 0.44346,
+    "acceptance_rate": 0.44411,
     "mu_pi": 0,
     "sigma_pi": 1,
-    "msd": 1.006501861222996,
-    "iat": 6.177980493173573,
-    "eff_sample_size": 16186.519221045792
+    "msd": 0.9869,
+    "iat": 6.4284,
+    "eff_sample_size": 15556
 }

@@ -4,10 +4,10 @@ sys.path.append('..')
 from utils import write_npy, write_json, timer
 
 class RandomWalk:
-    def __init__(self, N, x0, sigma_prop, dim, pi, **pi_params):
-        self.N = N
+    def __init__(self, num_samples, x0, sigma_prop, dim, pi, **pi_params):
+        self.num_samples = num_samples
         self.x0 = x0
-        self.samples = np.zeros((dim, N))
+        self.samples = np.zeros((dim, num_samples))
         self.samples[:, 0] = x0
         self.sigma_prop = sigma_prop
         self.dim = dim
@@ -24,10 +24,10 @@ class RandomWalk:
 
     @timer
     def sim(self, output_dir):
-        print(f"\nInititaing RW simulation with N = {self.N}...")
+        print(f"\nInititaing RW simulation with N = {self.num_samples}...")
         accepted = 0
         sim_params = {}
-        for i in range(1,self.N):
+        for i in range(1,self.num_samples):
             if i % 10000 == 0:
                 print(f'Simulation {i} complete')
             proposal = self.proposal(self.samples[:, i - 1])
@@ -41,8 +41,8 @@ class RandomWalk:
         class_name = self.__class__.__name__
         write_npy(output_dir, **{f"samples_{class_name}": self.samples})
         # Record acceptance rate
-        acceptance_rate = accepted / self.N
+        acceptance_rate = accepted / self.num_samples
         # Write output parameters json
-        params = {'N' : self.N, 'class' : self.__class__.__name__, 'class' : self.__class__.__name__, 'x0' : self.x0, 'sigma_prop' : self.sigma_prop, 'dim' : self.dim, 'acceptance_rate' : acceptance_rate} | self.pi_params
+        params = {'N' : self.num_samples, 'class' : self.__class__.__name__, 'class' : self.__class__.__name__, 'x0' : self.x0, 'sigma_prop' : self.sigma_prop, 'dim' : self.dim, 'acceptance_rate' : acceptance_rate} | self.pi_params
         write_json(output_dir, **{f"params_{class_name}": params})
 

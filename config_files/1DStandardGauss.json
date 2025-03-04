@@ -1,0 +1,30 @@
+{
+    "method1" : "StandardGaussRandomWalk1d",
+    "x0_1": 0.0,
+    "num_samples1": 100000,
+    "dim1" : 1,
+
+    "method2" : "GaussZigZag1d",
+    "x0_2": 0.0,
+    "num_samples2" : 100000,
+    "v0" : 1,
+    "dim2" : 1,
+    "final_time" : 100000,
+    "poisson_thinned" : false,
+    
+    "output_dir" : "data",
+    "do_timestamp" : false,
+
+    "do_plot_samples" : true,
+    "do_compare_cdf" : true,
+    "do_plot_zigzag" : false,
+    
+    "do_autocorr" : false,
+    "max_lag" : 50,
+    "do_plot_autocorr" : false,
+    "do_compare_autocorr" : true,
+    "do_write_autocorr_samples" : false,
+
+    "do_mean_squared_displacement" : true
+
+}

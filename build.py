@@ -1,6 +1,5 @@
 import os 
 import json 
-import numpy as np
 from datetime import datetime
 from utils import print_section
 from models.zigzag1d import ZigZag1d, GaussZigZag1d
@@ -9,19 +8,33 @@ from models.random_walk1d import StandardGaussRandomWalk1d
 import analysis as anl
 
 def main(config_file):
-    # Load configuration from JSON file 
+    """
+    Main function runs workflow based on config file 'config.json'.
+
+    Parameters
+    ---
+    config_file : str
+        Path to config file containing simulation parameters and options.
+
+    Workflow
+    ---
+        - Initialises selected models with provided parameters.
+        - Creates directory for saving simulation results and parameters.
+        - Runs simulation and selected analysis.
+    """
+    # Load configuration from config file 
     with open(config_file, 'r') as f:
         config = json.load(f)
     # Simulation parameters
     # Method 1
     method1 = config["method1"]
     x0_1 = config["x0_1"]
-    N1 = config["N1"]
+    num_samples1 = config["num_samples1"]
     dim1 = config["dim1"]
     # Method 2
     method2 = config["method2"]
     x0_2 = config["x0_2"]
-    N2 = config["N2"]
+    num_samples2 = config["num_samples2"]
     dim2 = config["dim2"]
     v0 = config["v0"]
     final_time = config["final_time"]
@@ -39,6 +52,7 @@ def main(config_file):
     do_compare_autocorr = config["do_compare_autocorr"]
     do_write_autocorr_samples = config["do_write_autocorr_samples"]
     do_mean_squared_displacement = config["do_mean_squared_displacement"]
+
     # Create output directory
     if do_timestamp:
         timestamp = datetime.now().strftime("%d%m%y_%H%M%S")
@@ -48,11 +62,12 @@ def main(config_file):
     os.makedirs(output_dir, exist_ok=True)
 
     print_section("Beginning Simulation")
+
     # Method 1
-    reference_class = globals().get(method1) # Dynamically instantiate 
+    reference_class = globals().get(method1) 
     if reference_class is None:
         raise ValueError(f"Method1 class '{method1}' not found.")
-    reference = reference_class(N=N1, x0=x0_1)
+    reference = reference_class(num_samples=num_samples1, x0=x0_1)
     reference.sim(output_dir)
     # Analysis method 1
     if do_plot_samples:
@@ -63,12 +78,13 @@ def main(config_file):
     if do_autocorr:
         anl.autocorr(output_dir, max_lag, method1, do_write_autocorr_samples, do_plot_autocorr)
     if do_mean_squared_displacement:
-        anl.mean_square_displacement(output_dir, method1)
+        anl.mean_squared_displacement(output_dir, method1)
+
     # Method 2
-    pdmp_class = globals().get(method2) # Dynamically instantiate 
+    pdmp_class = globals().get(method2) 
     if pdmp_class is None:
         raise ValueError(f"Method2 class '{method2}' not found.")
-    pdmp = pdmp_class(N=N2, final_time=final_time, x0=x0_2, v0=v0, dim=dim2, poisson_thinned=poisson_thinned)
+    pdmp = pdmp_class(num_samples=num_samples2, final_time=final_time, x0=x0_2, v0=v0, dim=dim2, poisson_thinned=poisson_thinned)
     pdmp.sim(output_dir)
     # Analysis method 2
     if do_plot_samples:
@@ -81,13 +97,13 @@ def main(config_file):
     if do_autocorr:
         anl.autocorr(output_dir, max_lag, method2, do_write_autocorr_samples, do_plot_autocorr)
     if do_mean_squared_displacement:
-        anl.mean_square_displacement(output_dir, method2)
+        anl.mean_squared_displacement(output_dir, method2)
+
     # Joint analysis
     if do_compare_cdf:
         anl.compare_cdf(output_dir, method1, method2)
     if do_compare_autocorr:
         anl.compare_autocorr(output_dir, max_lag, method1, method2)
-
 
     print_section("Workflow Complete!")
 

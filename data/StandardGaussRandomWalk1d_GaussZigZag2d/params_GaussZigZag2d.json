@@ -7,7 +7,7 @@
         0.0
     ],
     "poisson_thinned": false,
-    "msd": 1.000597236305932,
-    "iat": 3.620947087305753,
-    "eff_sample_size": 55234.1680719821
+    "msd": 1.0053,
+    "iat": 3.6587,
+    "eff_sample_size": 54665
 }
