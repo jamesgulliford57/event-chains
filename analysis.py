@@ -2,9 +2,9 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 import json
-from utils import write_npy
+from utils.data_utils import write_npy
 
-plt.style.use('seaborn-v0_8-darkgrid')
+plt.style.use('ggplot')
 plt.rcParams['agg.path.chunksize'] = 10000
 
 def get_directory(file_path):
@@ -18,7 +18,7 @@ def get_directory(file_path):
     """
     return os.path.dirname(file_path)
 
-def plot_samples1d(directory, method):
+def plot_samples1d(directory, target_name, simulator_name):
     """
     Produces plot with 4 subplots: i) 1D Trajectory, ii) First 500 samples of 1D trajectory,
     iii) Empirical PDF, iv) Empirical CDF
@@ -30,10 +30,10 @@ def plot_samples1d(directory, method):
     method: str
         Simulation method name 
     """
-    print(f"Plotting samples for {method}...")
+    print(f"Plotting samples for {target_name} {simulator_name} simulation...")
 
     # Identify file paths
-    samples_path = os.path.join(directory, f"samples_{method}.npy")
+    samples_path = os.path.join(directory, f"samples.npy")
     # Load files
     samples = np.load(samples_path)
     #print(np.shape(samples))
@@ -44,24 +44,25 @@ def plot_samples1d(directory, method):
     # Create figure and plot
     fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, figsize=(20,20))
     ax1.plot(samples, color='firebrick', alpha=0.8, label='Samples', linewidth=1)
-    ax1.legend()
+    ax1.legend(loc='upper right', fontsize=15)
     ax2.plot(samples[0:500], color='firebrick', alpha=0.8, label='Samples[0:500]', linewidth=1)
-    ax2.legend()
+    ax2.legend(loc='upper right', fontsize=15)
     ax3.hist(samples, bins=50, color='firebrick', alpha=0.8, label='Samples')
-    ax3.legend()
+    ax3.legend(loc='upper right', fontsize=15)
     cdf_values = []
     sorted_samples = np.sort(samples)
     cdf_values = np.arange(1, len(sorted_samples) + 1) / len(sorted_samples)
     ax4.plot(sorted_samples, cdf_values, color='firebrick', label='CDF', linewidth=1)
-    ax4.legend()
+    ax4.legend(fontsize=15)
+    fig.suptitle(f'{target_name} {simulator_name} {len(samples)} samples', fontsize=32, y=0.93)
     # Save output to file
-    output_file = os.path.join(directory, f"samples_plot_{method}.png")
+    output_file = os.path.join(directory, f"samples_plot.png")
     plt.savefig(output_file, dpi=400)
-    print(f"{method} samples plot saved to {output_file}")
+    print(f"{target_name} {simulator_name} samples plot saved to {output_file}")
 
     plt.close()
 
-def plot_samples2d(directory, method):
+def plot_samples2d(directory, target_name, simulator_name):
     """
     Produces plot with 4 subplots: i) 2D Trajectory Component 1, ii) 2D Trajectory Component 2
     iii) Empirical PDF, iv) Empirical CDF
@@ -73,10 +74,10 @@ def plot_samples2d(directory, method):
     method: str
         Simulation method name 
     """
-    print(f"Plotting samples for {method}...")
+    print(f"Plotting samples for {target_name} {simulator_name} simulation...")
 
     # Identify file paths
-    samples_path = os.path.join(directory, f"samples_{method}.npy")
+    samples_path = os.path.join(directory, f"samples.npy")
     # Load files
     samples = np.load(samples_path)
     if np.shape(samples)[0] != 2:
@@ -85,12 +86,12 @@ def plot_samples2d(directory, method):
     # Create figure and plot
     fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, figsize=(20,20))
     ax1.plot(samples[0, :], label="Component 0", alpha=0.8, color='firebrick', linewidth=1)
-    ax1.legend()
+    ax1.legend(loc='upper right', fontsize=15)
     ax2.plot(samples[1, :], label = "Component 1", alpha=0.8, color='firebrick', linewidth=1)
-    ax2.legend()
+    ax2.legend(loc='upper right', fontsize=15)
     ax3.hist(samples[0, :], bins=50, color='k', label="Component 0", alpha=0.5)
     ax3.hist(samples[1, :], bins=50, color='firebrick', label = "Component 1", alpha=0.5)
-    ax3.legend()
+    ax3.legend(loc='upper right', fontsize=15)
     # Plot cdf
     cdf_values = []
     sorted_samples = np.sort(samples[0, :])
@@ -100,11 +101,12 @@ def plot_samples2d(directory, method):
     sorted_samples = np.sort(samples[1, :])
     cdf_values = np.arange(1, len(sorted_samples) + 1) / len(sorted_samples)
     ax4.plot(sorted_samples, cdf_values, color = 'firebrick', label = "Component 1")
-    ax4.legend()
+    ax4.legend(fontsize=15)
+    fig.suptitle(f'{target_name} {simulator_name} {samples.shape[1]} samples', fontsize=32, y=0.93)
     # Save output to file
-    output_file = os.path.join(directory, f"samples_plot_{method}.png")
+    output_file = os.path.join(directory, f"samples_plot.png")
     plt.savefig(output_file, dpi=400)
-    print(f"{method} samples plot saved to {output_file}")
+    print(f"{target_name} {simulator_name} samples plot saved to {output_file}")
 
     plt.close()
 

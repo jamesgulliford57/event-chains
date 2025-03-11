@@ -1,10 +1,11 @@
 import os 
-import json 
+import configparser
 from datetime import datetime
-from utils import print_section
-from models.zigzag1d import ZigZag1d, GaussZigZag1d
-from models.zigzag2d import ZigZag2d, GaussZigZag2d
-from models.random_walk1d import StandardGaussRandomWalk1d
+from utils.sim_utils import print_section
+from utils.build_utils import parse_value, parse_possible_list
+from targets.standard_gauss_target import StandardGaussTarget
+from simulators.event_chain_simulator import EventChainSimulator
+from simulators.metropolis_simulator import MetropolisSimulator
 import analysis as anl
 
 def main(config_file):
@@ -22,95 +23,85 @@ def main(config_file):
         - Creates directory for saving simulation results and parameters.
         - Runs simulation and selected analysis.
     """
-    # Load configuration from config file 
-    with open(config_file, 'r') as f:
-        config = json.load(f)
-    # Simulation parameters
-    # Method 1
-    method1 = config["method1"]
-    x0_1 = config["x0_1"]
-    num_samples1 = config["num_samples1"]
-    dim1 = config["dim1"]
-    # Method 2
-    method2 = config["method2"]
-    x0_2 = config["x0_2"]
-    num_samples2 = config["num_samples2"]
-    dim2 = config["dim2"]
-    v0 = config["v0"]
-    final_time = config["final_time"]
-    poisson_thinned = config["poisson_thinned"] # Select whether to use Poisson thinning or analytical event rate
-    # Analysis paramters
-    max_lag = config["max_lag"]
-    output_dir = config["output_dir"]
-    do_timestamp = config["do_timestamp"]
-    # Select plots and analysis to perform 
-    do_plot_samples = config["do_plot_samples"]
-    do_plot_zigzag = config["do_plot_zigzag"]
-    do_compare_cdf = config["do_compare_cdf"]
-    do_autocorr = config["do_autocorr"]
-    do_plot_autocorr = config["do_plot_autocorr"]
-    do_compare_autocorr = config["do_compare_autocorr"]
-    do_write_autocorr_samples = config["do_write_autocorr_samples"]
-    do_mean_squared_displacement = config["do_mean_squared_displacement"]
+    # Load configuration
+    config = configparser.ConfigParser()
+    config.read(config_file)
+    # Run 
+    simulator_name = config.get("Run", "simulator")
+    # Simulator 
+    target_name = config.get("Simulator", "target")
+    num_samples = config.getint("Simulator", "num_samples")
+    x0 = parse_possible_list(config.get("Simulator", "x0"))
+    # Specific to chosen simulator 
+    simulator_specific_params = {key: parse_value(value) for key, value in config.items("SimulatorSpecific")}
+    # Target
+    dim = config.getint("Target", "dim")
+    target_params = {key: parse_value(value) for key, value in config.items("Target")}
+    # Analysis
+    do_timestamp = config.getboolean("Analysis", "do_timestamp")
+    do_plot_samples = config.getboolean("Analysis", "do_plot_samples")
+    do_compare_cdf = config.getboolean("Analysis", "do_compare_cdf")
+    do_plot_zigzag = config.getboolean("Analysis", "do_plot_zigzag")
 
+    do_reference = config.getboolean("Analysis", "do_reference")
+    reference_simulator = config.get("Analysis", "reference_simulator")
+
+    do_autocorr = config.getboolean("Analysis", "do_autocorr")
+    max_lag = config.getint("Analysis", "max_lag")
+    do_write_autocorr_samples = config.getboolean("Analysis", "do_write_autocorr_samples")
+    do_plot_autocorr = config.getboolean("Analysis", "do_plot_autocorr")
+    do_compare_autocorr = config.getboolean("Analysis", "do_compare_autocorr")
+
+    do_mean_squared_displacement = config.getboolean("Analysis", "do_mean_squared_displacement")
     # Create output directory
     if do_timestamp:
         timestamp = datetime.now().strftime("%d%m%y_%H%M%S")
-        output_dir = os.path.join(output_dir, f'{method1}_{method2}', timestamp)
+        output_dir = os.path.join('data', target_name, simulator_name, f'_num_samples={num_samples}_x0={x0}', timestamp)
     else:
-        output_dir = os.path.join(output_dir, f'{method1}_{method2}')
+        output_dir = os.path.join('data', target_name, simulator_name, f'_num_samples={num_samples}_x0={x0}')
     os.makedirs(output_dir, exist_ok=True)
 
-    print_section("Beginning Simulation")
+    print_section("Beginning Workflow")
 
-    # Method 1
-    reference_class = globals().get(method1) 
-    if reference_class is None:
-        raise ValueError(f"Method1 class '{method1}' not found.")
-    reference = reference_class(num_samples=num_samples1, x0=x0_1)
-    reference.sim(output_dir)
-    # Analysis method 1
+    # Build target
+    target_class = globals().get(target_name)
+    if target_class is None:
+        raise ValueError(f"Target class '{target_name}' not found.")
+    target = target_class(dim=dim, target_params=target_params)
+    print(f'\n{target_name} target initalised.')
+    
+    # Build simulator
+    simulator_class = globals().get(simulator_name)
+    if simulator_class is None:
+        raise ValueError(f'Simulator class {simulator_name} not found')
+    simulator = simulator_class(target=target, num_samples=num_samples, x0=x0, simulator_specific_params=simulator_specific_params)
+    print(f'\n{simulator_name} simulator initalised.')
+    simulator.sim(output_dir)
+    
+    # Analysis
     if do_plot_samples:
-        if dim1 == 1:
-            anl.plot_samples1d(output_dir, method1)
-        elif dim2 == 2:
-            anl.plot_samples2d(output_dir, method1)
-    if do_autocorr:
-        anl.autocorr(output_dir, max_lag, method1, do_write_autocorr_samples, do_plot_autocorr)
-    if do_mean_squared_displacement:
-        anl.mean_squared_displacement(output_dir, method1)
-
-    # Method 2
-    pdmp_class = globals().get(method2) 
-    if pdmp_class is None:
-        raise ValueError(f"Method2 class '{method2}' not found.")
-    pdmp = pdmp_class(num_samples=num_samples2, final_time=final_time, x0=x0_2, v0=v0, dim=dim2, poisson_thinned=poisson_thinned)
-    pdmp.sim(output_dir)
-    # Analysis method 2
-    if do_plot_samples:
-        if dim2 == 1:
-            anl.plot_samples1d(output_dir, method2)
-        elif dim2 == 2:
-            anl.plot_samples2d(output_dir, method2)
+        if dim == 1:
+            anl.plot_samples1d(output_dir, target_name, simulator_name)
+        elif dim == 2:
+            anl.plot_samples2d(output_dir, target_name, simulator_name)
     if do_plot_zigzag:
-        anl.plot_zigzag(output_dir, method2)
+        anl.plot_zigzag(output_dir, target_name)
     if do_autocorr:
-        anl.autocorr(output_dir, max_lag, method2, do_write_autocorr_samples, do_plot_autocorr)
+        anl.autocorr(output_dir, max_lag, target_name, do_write_autocorr_samples, do_plot_autocorr)
     if do_mean_squared_displacement:
-        anl.mean_squared_displacement(output_dir, method2)
+        anl.mean_squared_displacement(output_dir, target_name)
 
     # Joint analysis
-    if do_compare_cdf:
-        anl.compare_cdf(output_dir, method1, method2)
-    if do_compare_autocorr:
-        anl.compare_autocorr(output_dir, max_lag, method1, method2)
+    #if do_compare_cdf:
+    #    anl.compare_cdf(output_dir, method1, method2)
+    #if do_compare_autocorr:
+    #    anl.compare_autocorr(output_dir, max_lag, method1, method2)
 
     print_section("Workflow Complete!")
 
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description="Run workflow based on configuration file.")
-    parser.add_argument('--config', type=str, default='config.json', help="Path to the JSON configuration file.")
+    parser.add_argument('--config', type=str, default='config_files/metropolis.ini', help="Path to the JSON configuration file.")
     args = parser.parse_args()
-
     main(args.config)
