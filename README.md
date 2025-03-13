@@ -16,38 +16,44 @@ Configuration can be set within the config.ini file.
 ### Example Configuration
 ```bash
 [Run]
-simulator = MetropolisSimulator
+simulator = EventChainSimulator
 
 [Simulator]
-target = StandardGaussTarget
-num_samples = 30000
-x0 = 0.0
+do_simulation = True
+target = GaussTarget
+num_samples = 30000 
+x0 = [0.0, 0.0]
 
 [SimulatorSpecific]
-noise_distribution = GaussianNoiseDistribution
-sigma_noise = 2.38
+v0 = [1.0, 1.0]
+final_time = 30000.0
+poisson_thinned = True
 
 [Target]
-dim = 1
 mu_target = 0.0
 sigma_target = 1.0
+
+[ReferenceSimulator]
+do_reference_simulation = False 
+reference_simulator = MetropolisSimulator 
+
+[ReferenceSimulatorSpecific]
+noise_distribution = GaussianNoiseDistribution
+sigma_noise = 2.38
 
 [Analysis]
 do_timestamp = False
 do_plot_samples = True
-do_compare_cdf = False
-do_plot_zigzag = False
-
-do_reference = False 
-reference_simulator = Metropolis 
+do_compare_cdf = True
+do_plot_zigzag = True
 
 do_autocorr = False
 max_lag = 50
-do_write_autocorr_samples = False
+do_write_autocorr_samples = True
 do_plot_autocorr = False
-do_compare_autocorr = False
+do_compare_autocorr = True
 
-do_mean_squared_displacement = False
+do_mean_squared_displacement = True
 ```
 ## Run
 ```bash

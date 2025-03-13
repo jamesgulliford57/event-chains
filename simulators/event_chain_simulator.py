@@ -1,8 +1,7 @@
 from simulators.simulator import Simulator
 import numpy as np 
 from utils.data_utils import write_npy, write_json
-from utils.sim_utils import timer
-from utils.build_utils import parse_value
+from utils.sim_utils import timer, print_section
 
 class EventChainSimulator(Simulator):
     """
@@ -29,16 +28,24 @@ class EventChainSimulator(Simulator):
         """
         # If using Poisson thinned event rate call upper bound rate function
         if self.poisson_thinned:
-            return np.random.exponential(1 / self.target.event_rate_bound())
+            event_rate_bounds = self.target.event_rate_bound(self.x, self.v)
+            event_times = np.random.exponential(1 / event_rate_bounds)
+            component_to_flip = np.argmin(event_times)
+            return float(event_times[component_to_flip]), component_to_flip
         # Otherwise calculate using analytical event time
         else:
-            return self.target.event_time_func(self.x, self.v)
+            return float(self.target.event_time_func(self.x, self.v))
 
-    def _thinned_acceptance_prob(self):
+    def _thinned_acceptance_prob(self, component_to_flip):
         """
         Returns the acceptance probability when using Poisson thinning.
+
+        Parameters
+        ---
+        component_to_flip : int
+            Component of the state to flip.
         """
-        return self.target.event_rate() / self.target.event_rate_bound()
+        return self.target.event_rate(self.x, self.v)[component_to_flip] / self.target.event_rate_bound(self.x, self.v)[component_to_flip]
 
     @timer
     def sim(self, output_dir):
@@ -51,7 +58,7 @@ class EventChainSimulator(Simulator):
             Directory to save output files.
         """
 
-        print(f'\nInitiating {self.__class__.__name__} simulation of ' 
+        print_section(f'Running {self.__class__.__name__} simulation with ' 
               f'{self.target.__class__.__name__} target with {self.num_samples} '
               f'samples and final time {self.final_time}...')
         
@@ -61,23 +68,23 @@ class EventChainSimulator(Simulator):
         event_states = [self.x] 
         while time < self.final_time:
             if events % 10000 == 0 and events > 10000:
-                print(f"{len(event_times)} events occured")
+                print(f"{events} events occured")
             event_time, component_to_flip = self.find_next_event_time()
             self.x = self.x + self.v * event_time
-            time += float(event_time)
+            time += event_time
             event_states.append(self.x.copy())
             event_times.append(time)
             # For thinned simulation, only flip the velocity if the event is accepted
             if self.poisson_thinned:
-                if np.random.rand() < self.poisson_thinned_acceptance_prob():
-                    self.v = -self.v
+                if np.random.rand() < self._thinned_acceptance_prob(component_to_flip):
+                    self.v[component_to_flip] = -self.v[component_to_flip]
                     events += 1
             else:
                 # For the non-Poisson-thinned PDMP, always flip the velocity after each event
                 self.v[component_to_flip] = -self.v[component_to_flip]
                 events += 1  
 
-        print("\nPDMP simulation complete.")
+        print(f"Event chain simulation complete. {self.num_samples} samples generated")
 
         # Convert to arrays, 1 dimension per row
         event_times = np.array(event_times)
@@ -96,8 +103,8 @@ class EventChainSimulator(Simulator):
         # Write output parameters json
         if self.poisson_thinned:
             # If using thinning, calculate and record the acceptance rate
-            self.acceptance_rate = events / len(event_times)
+            self.thinned_acceptance_rate = events / len(event_times)
         params = {key : value for key, value in self.__dict__.items() if isinstance(value, (int, float, list, str, dict))}
-        write_json(output_dir, **{f"params" : params})
+        write_json(output_dir, **{f"output" : params})
 
 

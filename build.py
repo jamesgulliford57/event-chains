@@ -3,7 +3,7 @@ import configparser
 from datetime import datetime
 from utils.sim_utils import print_section
 from utils.build_utils import parse_value, parse_possible_list
-from targets.standard_gauss_target import StandardGaussTarget
+from targets.gauss_target import GaussTarget
 from simulators.event_chain_simulator import EventChainSimulator
 from simulators.metropolis_simulator import MetropolisSimulator
 import analysis as anl
@@ -27,24 +27,27 @@ def main(config_file):
     config = configparser.ConfigParser()
     config.read(config_file)
     # Run 
+    do_simulation = config.getboolean("Simulator", "do_simulation")
     simulator_name = config.get("Run", "simulator")
     # Simulator 
     target_name = config.get("Simulator", "target")
     num_samples = config.getint("Simulator", "num_samples")
     x0 = parse_possible_list(config.get("Simulator", "x0"))
+    dim = len(x0)
     # Specific to chosen simulator 
     simulator_specific_params = {key: parse_value(value) for key, value in config.items("SimulatorSpecific")}
     # Target
-    dim = config.getint("Target", "dim")
-    target_params = {key: parse_value(value) for key, value in config.items("Target")}
+    target_params = {'dim' : dim} | {key: parse_value(value) for key, value in config.items("Target")}
+    # Reference
+    do_reference_simulation = config.getboolean("ReferenceSimulator", "do_reference_simulation")
+    reference_simulator_name = config.get("ReferenceSimulator", "reference_simulator")
+    if do_reference_simulation:
+        reference_simulator_specific_params = {key: parse_value(value) for key, value in config.items("ReferenceSimulatorSpecific")}
     # Analysis
     do_timestamp = config.getboolean("Analysis", "do_timestamp")
     do_plot_samples = config.getboolean("Analysis", "do_plot_samples")
     do_compare_cdf = config.getboolean("Analysis", "do_compare_cdf")
     do_plot_zigzag = config.getboolean("Analysis", "do_plot_zigzag")
-
-    do_reference = config.getboolean("Analysis", "do_reference")
-    reference_simulator = config.get("Analysis", "reference_simulator")
 
     do_autocorr = config.getboolean("Analysis", "do_autocorr")
     max_lag = config.getint("Analysis", "max_lag")
@@ -56,46 +59,76 @@ def main(config_file):
     # Create output directory
     if do_timestamp:
         timestamp = datetime.now().strftime("%d%m%y_%H%M%S")
-        output_dir = os.path.join('data', target_name, simulator_name, f'_num_samples={num_samples}_x0={x0}', timestamp)
+        output_dir = os.path.join('data', target_name, simulator_name, f'num_samples={num_samples}_x0={x0}', timestamp)
     else:
-        output_dir = os.path.join('data', target_name, simulator_name, f'_num_samples={num_samples}_x0={x0}')
+        output_dir = os.path.join('data', target_name, simulator_name, f'num_samples={num_samples}_x0={x0}')
     os.makedirs(output_dir, exist_ok=True)
+    if do_reference_simulation:
+            reference_output_dir = os.path.join(output_dir, 'reference')
 
     print_section("Beginning Workflow")
 
     # Build target
-    target_class = globals().get(target_name)
-    if target_class is None:
-        raise ValueError(f"Target class '{target_name}' not found.")
-    target = target_class(dim=dim, target_params=target_params)
-    print(f'\n{target_name} target initalised.')
+    if do_simulation:
+        target_class = globals().get(target_name)
+        if target_class is None:
+            raise ValueError(f"Target class '{target_name}' not found.")
+        target = target_class(dim=dim, target_params=target_params)
+        print(f'\n{target_name} target with parameters {target_params} initalised.')
     
-    # Build simulator
-    simulator_class = globals().get(simulator_name)
-    if simulator_class is None:
-        raise ValueError(f'Simulator class {simulator_name} not found')
-    simulator = simulator_class(target=target, num_samples=num_samples, x0=x0, simulator_specific_params=simulator_specific_params)
-    print(f'\n{simulator_name} simulator initalised.')
-    simulator.sim(output_dir)
+        # Build simulator
+        simulator_class = globals().get(simulator_name)
+        if simulator_class is None:
+            raise ValueError(f'Simulator class {simulator_name} not found')
+        simulator = simulator_class(target=target, num_samples=num_samples, x0=x0, simulator_specific_params=simulator_specific_params)
+        print(f'\n{simulator_name} simulator with parameters {simulator_specific_params} initalised.')
+        
+        # Build reference simulator
+        if do_reference_simulation:
+            reference_simulator_class = globals().get(reference_simulator_name)
+            if reference_simulator_class is None:
+                raise ValueError(f'Reference simulator class {reference_simulator_name} not found')
+            reference_simulator = reference_simulator_class(target=target, num_samples=num_samples, x0=x0, simulator_specific_params=reference_simulator_specific_params)
+            print(f'\n{reference_simulator_name} reference simulator with parameters {reference_simulator_specific_params} initalised.')
+
+        # Simulation
+        simulator.sim(output_dir)
+        if do_reference_simulation:
+            os.makedirs(reference_output_dir, exist_ok=True)
+            reference_simulator.sim(reference_output_dir)
     
     # Analysis
     if do_plot_samples:
         if dim == 1:
             anl.plot_samples1d(output_dir, target_name, simulator_name)
+            if do_reference_simulation:
+                anl.plot_samples1d(reference_output_dir, target_name, reference_simulator_name)
         elif dim == 2:
             anl.plot_samples2d(output_dir, target_name, simulator_name)
+            if do_reference_simulation:
+                anl.plot_samples2d(reference_output_dir, target_name, reference_simulator_name)
     if do_plot_zigzag:
-        anl.plot_zigzag(output_dir, target_name)
+        if dim == 2:
+            anl.plot_zigzag(output_dir, target_name, simulator_name)
+        else:
+            print("Zigzag plot only available for 2D targets. Skipping...")
     if do_autocorr:
         anl.autocorr(output_dir, max_lag, target_name, do_write_autocorr_samples, do_plot_autocorr)
+        if do_reference_simulation:
+            anl.autocorr(reference_output_dir, max_lag, target_name, do_write_autocorr_samples, do_plot_autocorr, reference_simulator_name)
     if do_mean_squared_displacement:
-        anl.mean_squared_displacement(output_dir, target_name)
+        anl.mean_squared_displacement(output_dir, target_name, simulator_name)
+        if do_reference_simulation:
+            anl.mean_squared_displacement(reference_output_dir, target_name, reference_simulator_name)
 
     # Joint analysis
-    #if do_compare_cdf:
-    #    anl.compare_cdf(output_dir, method1, method2)
-    #if do_compare_autocorr:
-    #    anl.compare_autocorr(output_dir, max_lag, method1, method2)
+    if do_compare_cdf:
+        if dim == 1:
+            anl.compare_cdf(output_dir, target_name, simulator_name, reference_simulator_name)
+        elif dim == 2:
+            anl.compare_norm_cdf(output_dir, target_name, simulator_name, reference_simulator_name)
+    if do_compare_autocorr:
+        anl.compare_autocorr(output_dir, max_lag, target_name, simulator_name, reference_simulator_name, do_write_autocorr_samples)
 
     print_section("Workflow Complete!")
 

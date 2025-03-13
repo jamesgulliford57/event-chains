@@ -1,8 +1,7 @@
 from simulators.simulator import Simulator
 import numpy as np 
 from utils.data_utils import write_npy, write_json
-from utils.sim_utils import timer
-from utils.build_utils import parse_value
+from utils.sim_utils import timer, print_section
 from noise_dists.gaussian_noise_dist import GaussianNoiseDistribution
 
 class MetropolisSimulator(Simulator):
@@ -55,7 +54,7 @@ class MetropolisSimulator(Simulator):
             Directory to save output files.
         """
 
-        print(f'\nInitiating {self.__class__.__name__} simulation of ' 
+        print_section(f'Running {self.__class__.__name__} simulation with ' 
               f'{self.target.__class__.__name__} target with {self.num_samples} '
               f'samples')
 
@@ -63,14 +62,14 @@ class MetropolisSimulator(Simulator):
         samples = [self.x]
         for i in range(1, self.num_samples):
             if i % 10000 == 0:
-                print(f'Simulation {i} complete')
+                print(f'Step {i} occured.')
             proposed_state = self.noise_distribution.propose_new_state(self.x)
             if np.random.uniform() < self._acc_prob(self.x, proposed_state):
                 self.x = proposed_state 
                 accepted += 1
             samples.append(self.x.copy())
 
-        print("\nMetropolis simulation complete. Performing analysis...")
+        print(f"Metropolis simulation complete. {self.num_samples} samples generated")
         
         samples = np.array(samples).T 
         # Write samples to numpy file
@@ -79,6 +78,5 @@ class MetropolisSimulator(Simulator):
         self.acceptance_rate = accepted / self.num_samples
         # Write output parameters json
         params = {key : value for key, value in self.__dict__.items() if isinstance(value, (int, float, list, str, dict))}
-        #params = {'N' : self.num_samples, 'class' : self.__class__.__name__, 'class' : self.__class__.__name__, 'x0' : self.x0, 'sigma_prop' : self.sigma_prop, 'dim' : self.dim, 'acceptance_rate' : acceptance_rate} | self.pi_params
-        write_json(output_dir, **{f"params": params})
+        write_json(output_dir, **{f"output": params})
 

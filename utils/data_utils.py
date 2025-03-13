@@ -17,7 +17,7 @@ def write_npy(output_directory, **data_arrays):
             file_path = join(output_directory, f"{array_name}.npy")
             save(file_path, array_data)
 
-        print(f"\nData saved in {output_directory}")
+        print(f"\n{tuple(data_arrays.keys())} arrays written to {output_directory}")
 
 def write_json(output_directory, **data_arrays):
         """
@@ -42,6 +42,15 @@ def write_json(output_directory, **data_arrays):
         print(f"\nData saved in {output_directory}")  
 
 def update_json(json_path, **items):
+    """
+    
+    Parameters
+    ---
+    json_path : str
+        Path to the json file.
+    **items : keyword arguments
+        Key-value pairs to be added to the json file.
+    """
     from os import path 
     import json 
 
