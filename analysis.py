@@ -1,108 +1,80 @@
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
 import json
 from utils.data_utils import write_npy
 
 plt.style.use('ggplot')
 plt.rcParams['agg.path.chunksize'] = 10000
 
-def get_directory(file_path):
+def plot_samples(directory, figsize=(16, 20)):
     """
-    Obtain directory provides file is stored at.
-    
-    Parameters
-    ---
-    file_path: str
-        Path to file
-    """
-    return os.path.dirname(file_path)
-
-def plot_samples1d(directory, target_name, simulator_name, figsize=(20, 20)):
-    """
-    Produces plot with 4 subplots: i) 1D Trajectory, ii) First 500 samples of 1D trajectory,
+    Produces plot with 4 subplots: i) Samples, ii) First 500 samples,
     iii) Empirical PDF, iv) Empirical CDF
     
     Parameters
     ---
     directory: str
         Path to directory containing simulation files.
-    method: str
-        Simulation method name 
+    figsize: tuple
+        Size of figure.
     """
+    # Identify file paths
+    samples_path = os.path.join(directory, f"position_samples.npy")
+    output_path = os.path.join(directory, f"output.json")
+    # Load files
+    samples = np.atleast_2d(np.load(samples_path))
+    if os.path.exists(output_path):
+        try:
+            with open(output_path, 'r') as f:
+                output = json.load(f)
+        except json.JSONDecodeError:
+            output = {}
+    else:
+        output = {}
+
+    target_name = output['target_name']
+    simulator_name = output['simulator_name']
+
     print(f"\nPlotting samples for {target_name} {simulator_name} simulation...")
 
-    # Identify file paths
-    samples_path = os.path.join(directory, f"samples.npy")
-    # Load files
-    samples = np.load(samples_path)
-    #print(np.shape(samples))
-    #if np.shape(samples)[1] != 1:
-    #    raise TypeError(f'Function is for plotting 1d states only. Provided {np.shape(samples)[0]}')
-    samples = samples.flatten()
-    
+    dim = np.shape(samples)[0]
+
+    colors = ["firebrick", "black", "dimgray", "darkred", "brown", "maroon", "gray", "darkslategray"]
+    n_colors = len(colors)
+    custom_cmap = mcolors.LinearSegmentedColormap.from_list("custom_cmap", colors, N=n_colors)
+    if dim == 1:
+        cpt_colors = ["firebrick"]  
+    else:
+        cpt_colors = [custom_cmap(i / (dim - 1)) for i in range(dim)]
     # Create figure and plot
     fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, figsize=figsize)
-    ax1.plot(samples, color='firebrick', alpha=0.8, label='Samples', linewidth=1)
-    ax1.legend(frameon=True, facecolor='white', edgecolor='none', fontsize=10)
-    ax2.plot(samples[0:500], color='firebrick', alpha=0.8, label='Samples[0:500]', linewidth=1)
-    ax2.legend(frameon=True, facecolor='white', edgecolor='none', fontsize=10)
-    ax3.hist(samples, bins=50, color='firebrick', alpha=0.8, label='Samples')
-    ax3.legend(frameon=True, facecolor='white', edgecolor='none', fontsize=10)
-    cdf_values = []
-    sorted_samples = np.sort(samples)
-    cdf_values = np.arange(1, len(sorted_samples) + 1) / len(sorted_samples)
-    ax4.plot(sorted_samples, cdf_values, color='firebrick', label='CDF', linewidth=1)
-    ax4.legend(frameon=True, facecolor='white', edgecolor='none', fontsize=10)
-    fig.suptitle(f'{target_name} {simulator_name} {len(samples)} samples', fontsize=32, y=0.93)
-    # Save output to file
-    output_file = os.path.join(directory, f"samples_plot.png")
-    plt.savefig(output_file, dpi=400)
-    print(f"{target_name} {simulator_name} samples plot saved to {output_file}")
-
-    plt.close()
-
-def plot_samples2d(directory, target_name, simulator_name, figsize=(20, 20)):
-    """
-    Produces plot with 4 subplots: i) 2D Trajectory Component 1, ii) 2D Trajectory Component 2
-    iii) Empirical PDF, iv) Empirical CDF
+    for cpt in range(dim):
+        ax1.plot(samples[cpt, :], color=cpt_colors[cpt], alpha=0.6, label=f'Samples[{cpt}]', linewidth=1)
+    if dim < 5:
+        ax1.legend(frameon=True, facecolor='white', edgecolor='none', fontsize=14)
     
-    Parameters
-    ---
-    directory: str
-        Path to directory containing simulation files.
-    method: str
-        Simulation method name 
-    """
-    print(f"\nPlotting samples for {target_name} {simulator_name} simulation...")
-
-    # Identify file paths
-    samples_path = os.path.join(directory, f"samples.npy")
-    # Load files
-    samples = np.load(samples_path)
-    if np.shape(samples)[0] != 2:
-        raise TypeError(f'Function is for plotting 2d states only. Provided {np.shape(samples)[0]}')
-   
-    # Create figure and plot
-    fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, figsize=figsize)
-    ax1.plot(samples[0, :], label="Component 0", alpha=0.8, color='firebrick', linewidth=1)
-    ax1.legend(frameon=True, facecolor='white', edgecolor='none', fontsize=10)
-    ax2.plot(samples[1, :], label = "Component 1", alpha=0.8, color='firebrick', linewidth=1)
-    ax2.legend(frameon=True, facecolor='white', edgecolor='none', fontsize=10)
-    ax3.hist(samples[0, :], bins=50, color='k', label="Component 0", alpha=0.5)
-    ax3.hist(samples[1, :], bins=50, color='firebrick', label = "Component 1", alpha=0.5)
-    ax3.legend(frameon=True, facecolor='white', edgecolor='none', fontsize=10)
-    # Plot cdf
-    cdf_values = []
-    sorted_samples = np.sort(samples[0, :])
-    cdf_values = np.arange(1, len(sorted_samples) + 1) / len(sorted_samples)
-    ax4.plot(sorted_samples, cdf_values, color='k', label="Component 0")
-    cdf_values = []
-    sorted_samples = np.sort(samples[1, :])
-    cdf_values = np.arange(1, len(sorted_samples) + 1) / len(sorted_samples)
-    ax4.plot(sorted_samples, cdf_values, color = 'firebrick', label = "Component 1")
-    ax4.legend(frameon=True, facecolor='white', edgecolor='none', fontsize=10)
-    fig.suptitle(f'{target_name} {simulator_name} {samples.shape[1]} samples', fontsize=32, y=0.93)
+    for cpt in range(dim):
+        ax2.plot(samples[cpt, :][:500], color=cpt_colors[cpt], alpha=0.6, label=f'Samples[{cpt}][0:500]', linewidth=1)
+    if dim < 5:
+        ax2.legend(frameon=True, facecolor='white', edgecolor='none', fontsize=14)
+    
+    for cpt in range(dim):
+        ax3.hist(samples[cpt, :], bins=50, color=cpt_colors[cpt], alpha=0.6, label=f'Samples[{cpt}]')
+    if dim < 5:
+        ax3.legend(frameon=True, facecolor='white', edgecolor='none', fontsize=14)
+    
+    for cpt in range(dim):
+        cdf_values = []
+        sorted_samples = np.sort(samples[cpt, :])
+        cdf_values = np.arange(1, len(sorted_samples) + 1) / len(sorted_samples)
+        ax4.plot(sorted_samples, cdf_values, color=cpt_colors[cpt], alpha=0.6, label=f'Samples[{cpt}]', linewidth=1)
+    if dim < 5:
+        ax4.legend(frameon=True, facecolor='white', edgecolor='none', fontsize=14)
+    
+    fig.suptitle(f'{target_name} {simulator_name} {np.shape(samples)[1]} samples', fontsize=32, y=0.93)
+    
     # Save output to file
     output_file = os.path.join(directory, f"samples_plot.png")
     plt.savefig(output_file, dpi=400)
@@ -197,26 +169,42 @@ def compare_cdf(directory, target_name, simulator_name, reference_simulator_name
     print(f"\nComparing CDFs for {target_name} {simulator_name} and {reference_simulator_name} simulation samples...")
 
     # Identify file paths
-    samples1_path = os.path.join(directory, f"samples.npy")
-    samples2_path = os.path.join(directory, f"reference/samples.npy")
+    samples1_path = os.path.join(directory, f"position_samples.npy")
+    samples2_path = os.path.join(directory, f"reference/position_samples.npy")
     # Load files
-    samples1 = np.load(samples1_path).flatten() # Fix this to plot 2D cdfs
-    samples2 = np.load(samples2_path).flatten() # Fix this to plot 2D cdfs
+    samples1 = np.load(samples1_path)
+    samples1 = np.atleast_2d(samples1)
+    samples2 = np.load(samples2_path)
+    samples2 = np.atleast_2d(samples2)
+
+    dim = np.shape(samples1)[0]
+
+    colors = ["firebrick", "black", "dimgray", "darkred", "brown", "maroon", "gray", "darkslategray"]
+    n_colors = len(colors)
+    custom_cmap = mcolors.LinearSegmentedColormap.from_list("custom_cmap", colors, N=n_colors)
+    if dim == 1:
+        cpt_colors = ["firebrick"]  
+    else:
+        cpt_colors = [custom_cmap(i / (dim - 1)) for i in range(dim)]
     # Create figure and plot
     fig, ax = plt.subplots()
     # Create cdf 1
-    sorted_samples1 = np.sort(samples1)
-    cdf_values1 = np.arange(1, len(sorted_samples1) + 1) / len(sorted_samples1)
-    ax.plot(sorted_samples1, cdf_values1, linestyle = '-', color = 'r', alpha=0.5, linewidth = 2, label = simulator_name)
+    for cpt in range(dim):
+        sorted_samples1 = np.sort(samples1[cpt, :])
+        cdf_values1 = np.arange(1, len(sorted_samples1) + 1) / len(sorted_samples1)
+        ax.plot(sorted_samples1, cdf_values1, linestyle = '-', color = cpt_colors[cpt], alpha=0.5, linewidth = 2, label=f'{simulator_name}[{cpt}]')
     # Create cdf 2
-    sorted_samples2 = np.sort(samples2)
-    cdf_values2 = np.arange(1, len(sorted_samples2) + 1) / len(sorted_samples2)
-    ax.plot(sorted_samples2, cdf_values2, linestyle = '--', color = 'k', alpha=0.5, label = reference_simulator_name)
+    for cpt in range(dim):
+        sorted_samples2 = np.sort(samples2[cpt, :])
+        cdf_values2 = np.arange(1, len(sorted_samples2) + 1) / len(sorted_samples2)
+        ax.plot(sorted_samples2, cdf_values2, linestyle = '--', color = cpt_colors[cpt], alpha=0.5, label=f'{reference_simulator_name}[{cpt}]')
+    
     ax.grid(True, linestyle="--", linewidth=0.5, color="gray", alpha=0.6)
     ax.set_xlabel('x', fontsize=12, color='black')
     ax.set_ylabel('CDF', fontsize=12, color='black')
     fig.suptitle(f'{target_name} CDF Comparison', fontsize=14, color='black', y=0.95)
-    ax.legend(frameon=True)
+    if dim < 5:
+        ax.legend(frameon=True, facecolor='white', edgecolor='none', fontsize=10)
 
     output_file = os.path.join(directory, f"cdf_compare_plot.png")
     plt.savefig(output_file, dpi=400)
@@ -270,7 +258,7 @@ def autocorr(directory, max_lag, target_name, simulator_name, do_write_autocorr_
 
     max_lag = int(max_lag)
     # Identify file paths
-    samples_path = os.path.join(directory, f"samples.npy")
+    samples_path = os.path.join(directory, f"position_samples.npy")
     # Load files
     samples = np.load(samples_path).flatten()
     mean = np.mean(samples)
@@ -368,7 +356,7 @@ def mean_squared_displacement(directory, target_name, simulator_name):
     print(f"Calculating mean squared displacement for {target_name} {simulator_name} samples...")
 
     # Identify file path
-    samples_path = os.path.join(directory, f"samples.npy")
+    samples_path = os.path.join(directory, f"position_samples.npy")
     # Load files
     samples = np.load(samples_path)
 
@@ -410,17 +398,20 @@ def compare_norm_cdf(directory, target_name, simulator_name, reference_simulator
     reference_simulator_name: str    
         Name of the reference simulation method.
     """
-    print(f"\nComparing 2D norm CDFs for {target_name} {simulator_name} and {reference_simulator_name} simulation samples...")
+    print(f"\nComparing norm CDFs for {target_name} {simulator_name} and {reference_simulator_name} simulation samples...")
 
     # Identify file paths
-    samples1_path = os.path.join(directory, f"samples.npy")
-    samples2_path = os.path.join(directory, f"reference/samples.npy")
+    samples1_path = os.path.join(directory, f"position_samples.npy")
+    samples2_path = os.path.join(directory, f"reference/position_samples.npy")
     # Load files
     samples1 = np.load(samples1_path)
+    samples1 = np.atleast_2d(samples1)
     samples2 = np.load(samples2_path)
+    samples2 = np.atleast_2d(samples2)
+    dim = np.shape(samples1)[0]
     # Calculate norm
-    samples1 = samples1[0, :]**2 + samples1[1, :]**2 
-    samples2 = samples2[0, :]**2 + samples2[1, :]**2
+    samples1 = np.array(sum(samples1[i, :]**2 for i in range(dim)))**0.5
+    samples2 = np.array(sum(samples2[i, :]**2 for i in range(dim)))**0.5
 
     fig, ax = plt.subplots()
     # Create cdf 1
@@ -432,10 +423,11 @@ def compare_norm_cdf(directory, target_name, simulator_name, reference_simulator
     cdf_values2 = np.arange(1, len(sorted_samples2) + 1) / len(sorted_samples2)
     ax.plot(sorted_samples2, cdf_values2, linestyle = '--', color = 'k', alpha=0.5, label = reference_simulator_name)
     ax.grid(True, linestyle="--", linewidth=0.5, color="gray", alpha=0.6)
-    ax.set_xlabel('x', fontsize=12, color='black')
+    ax.set_xlabel('Norm', fontsize=12, color='black')
     ax.set_ylabel('CDF', fontsize=12, color='black')
     fig.suptitle(f'{target_name} Norm CDF Comparison', fontsize=14, color='black', y=0.95)
-    ax.legend(frameon=True, facecolor='white', edgecolor='none', fontsize=10)
+    if dim < 5:
+        ax.legend(frameon=True, facecolor='white', edgecolor='none', fontsize=10)
 
     output_file = os.path.join(directory, f"norm_cdf_compare_plot.png")
     plt.savefig(output_file, dpi=400)

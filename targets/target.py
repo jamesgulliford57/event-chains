@@ -30,11 +30,15 @@ class Target(ABC):
             setattr(self, key, value) 
 
         @abstractmethod 
-        def pdf(*args):
+        def pdf(self, *args):
             """
             Outputs probability density at provided input.
             """
-            pass 
+            raise NotImplementedError 
+
+        @abstractmethod
+        def event_time_func(self):
+            raise NotImplementedError
 
 
     

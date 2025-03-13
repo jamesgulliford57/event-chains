@@ -47,6 +47,7 @@ def main(config_file):
     do_timestamp = config.getboolean("Analysis", "do_timestamp")
     do_plot_samples = config.getboolean("Analysis", "do_plot_samples")
     do_compare_cdf = config.getboolean("Analysis", "do_compare_cdf")
+    do_norm_compare_cdf = config.getboolean("Analysis", "do_norm_compare_cdf")
     do_plot_zigzag = config.getboolean("Analysis", "do_plot_zigzag")
 
     do_autocorr = config.getboolean("Analysis", "do_autocorr")
@@ -99,14 +100,9 @@ def main(config_file):
     
     # Analysis
     if do_plot_samples:
-        if dim == 1:
-            anl.plot_samples1d(output_dir, target_name, simulator_name)
-            if do_reference_simulation:
-                anl.plot_samples1d(reference_output_dir, target_name, reference_simulator_name)
-        elif dim == 2:
-            anl.plot_samples2d(output_dir, target_name, simulator_name)
-            if do_reference_simulation:
-                anl.plot_samples2d(reference_output_dir, target_name, reference_simulator_name)
+        anl.plot_samples(output_dir)
+        if do_reference_simulation:
+            anl.plot_samples(reference_output_dir)
     if do_plot_zigzag:
         if dim == 2:
             anl.plot_zigzag(output_dir, target_name, simulator_name)
@@ -123,9 +119,8 @@ def main(config_file):
 
     # Joint analysis
     if do_compare_cdf:
-        if dim == 1:
             anl.compare_cdf(output_dir, target_name, simulator_name, reference_simulator_name)
-        elif dim == 2:
+    if do_norm_compare_cdf:
             anl.compare_norm_cdf(output_dir, target_name, simulator_name, reference_simulator_name)
     if do_compare_autocorr:
         anl.compare_autocorr(output_dir, max_lag, target_name, simulator_name, reference_simulator_name, do_write_autocorr_samples)
