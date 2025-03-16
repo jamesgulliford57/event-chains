@@ -46,12 +46,15 @@ def main(config_file):
     # Analysis
     do_timestamp = config.getboolean("Analysis", "do_timestamp")
     do_plot_samples = config.getboolean("Analysis", "do_plot_samples")
+    do_plot_zigzag = config.getboolean("Analysis", "do_plot_zigzag")
+
     do_compare_cdf = config.getboolean("Analysis", "do_compare_cdf")
     do_norm_compare_cdf = config.getboolean("Analysis", "do_norm_compare_cdf")
-    do_plot_zigzag = config.getboolean("Analysis", "do_plot_zigzag")
+    do_cvm_test = config.getboolean("Analysis", "do_cvm_test")
 
     do_autocorr = config.getboolean("Analysis", "do_autocorr")
     max_lag = config.getint("Analysis", "max_lag")
+    autocorr_method = config.get("Analysis", "autocorr_method")
     do_write_autocorr_samples = config.getboolean("Analysis", "do_write_autocorr_samples")
     do_plot_autocorr = config.getboolean("Analysis", "do_plot_autocorr")
     do_compare_autocorr = config.getboolean("Analysis", "do_compare_autocorr")
@@ -105,25 +108,25 @@ def main(config_file):
             anl.plot_samples(reference_output_dir)
     if do_plot_zigzag:
         if dim == 2:
-            anl.plot_zigzag(output_dir, target_name, simulator_name)
+            anl.plot_zigzag(output_dir)
         else:
             print("Zigzag plot only available for 2D targets. Skipping...")
     if do_autocorr:
-        anl.autocorr(output_dir, max_lag, target_name, do_write_autocorr_samples, do_plot_autocorr)
+        anl.autocorr(output_dir, max_lag, autocorr_method, do_write_autocorr_samples, do_plot_autocorr)
         if do_reference_simulation:
-            anl.autocorr(reference_output_dir, max_lag, target_name, do_write_autocorr_samples, do_plot_autocorr, reference_simulator_name)
+            anl.autocorr(reference_output_dir, max_lag, autocorr_method, do_write_autocorr_samples, do_plot_autocorr, reference_simulator_name)
     if do_mean_squared_displacement:
-        anl.mean_squared_displacement(output_dir, target_name, simulator_name)
+        anl.mean_squared_displacement(output_dir)
         if do_reference_simulation:
-            anl.mean_squared_displacement(reference_output_dir, target_name, reference_simulator_name)
+            anl.mean_squared_displacement(reference_output_dir)
 
     # Joint analysis
     if do_compare_cdf:
-            anl.compare_cdf(output_dir, target_name, simulator_name, reference_simulator_name)
+            anl.compare_cdf(output_dir, do_cvm_test)
     if do_norm_compare_cdf:
-            anl.compare_norm_cdf(output_dir, target_name, simulator_name, reference_simulator_name)
+            anl.compare_norm_cdf(output_dir)
     if do_compare_autocorr:
-        anl.compare_autocorr(output_dir, max_lag, target_name, simulator_name, reference_simulator_name, do_write_autocorr_samples)
+        anl.compare_autocorr(output_dir, max_lag, autocorr_method, do_write_autocorr_samples)
 
     print_section("Workflow Complete!")
 

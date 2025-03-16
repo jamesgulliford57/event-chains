@@ -31,15 +31,38 @@ def write_json(output_directory, **data_arrays):
             Each keyword corresponds to the name of the array, and the value is the array to be saved.
         """
         from os.path import join
-        from json import dump
+        import json
 
         # Save each array to its own file in the directory
         for array_name, array_data in data_arrays.items():
             file_path = join(output_directory, f"{array_name}.json")
             with open(file_path, "w") as f:
-                  dump(array_data, f, indent=4)
+                  json.dump(array_data, f, indent=4)
 
         print(f"\nData saved in {output_directory}")  
+
+def read_json(json_path):
+    """
+    Read data from a json file.
+
+    Parameters
+    ---
+    json_path : str
+        Path to the json file.
+    """
+    import json
+    import os
+
+    if os.path.exists(json_path):
+        try:
+            with open(json_path, 'r') as f:
+                output = json.load(f)
+        except json.JSONDecodeError:
+            output = {}
+    else:
+        output = {}
+
+    return output
 
 def update_json(json_path, **items):
     """
@@ -71,3 +94,23 @@ def update_json(json_path, **items):
             json.dump(items, f, indent=4)
 
     return data
+
+def set_colors(dim):
+    """
+    Create a list of colors for plotting based on the number of dimensions.
+
+    Parameters
+    ---
+    dim : int
+        Number of dimensions.
+    """
+    import matplotlib.colors as mcolors
+
+    colors = ["firebrick", "black", "dimgray", "darkred", "brown", "maroon", "gray", "darkslategray"]
+    n_colors = len(colors)
+    custom_cmap = mcolors.LinearSegmentedColormap.from_list("custom_cmap", colors, N=n_colors)
+    if dim == 1:
+        cpt_colors = ["firebrick"]  
+    else:
+        cpt_colors = [custom_cmap(i / (dim - 1)) for i in range(dim)]
+    return cpt_colors

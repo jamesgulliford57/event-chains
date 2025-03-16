@@ -1,14 +1,13 @@
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.colors as mcolors
 import json
-from utils.data_utils import write_npy
+from utils.data_utils import write_npy, read_json, set_colors
 
 plt.style.use('ggplot')
 plt.rcParams['agg.path.chunksize'] = 10000
 
-def plot_samples(directory, figsize=(16, 20)):
+def plot_samples(directory, initial_samples=500, figsize=(16, 20)):
     """
     Produces plot with 4 subplots: i) Samples, ii) First 500 samples,
     iii) Empirical PDF, iv) Empirical CDF
@@ -17,6 +16,8 @@ def plot_samples(directory, figsize=(16, 20)):
     ---
     directory: str
         Path to directory containing simulation files.
+    initial_samples: int
+        Number of initial samples to plot in second subplot.
     figsize: tuple
         Size of figure.
     """
@@ -24,15 +25,9 @@ def plot_samples(directory, figsize=(16, 20)):
     samples_path = os.path.join(directory, f"position_samples.npy")
     output_path = os.path.join(directory, f"output.json")
     # Load files
-    samples = np.atleast_2d(np.load(samples_path))
-    if os.path.exists(output_path):
-        try:
-            with open(output_path, 'r') as f:
-                output = json.load(f)
-        except json.JSONDecodeError:
-            output = {}
-    else:
-        output = {}
+    samples = np.load(samples_path)
+    samples = np.atleast_2d(samples)
+    output = read_json(output_path)
 
     target_name = output['target_name']
     simulator_name = output['simulator_name']
@@ -40,37 +35,29 @@ def plot_samples(directory, figsize=(16, 20)):
     print(f"\nPlotting samples for {target_name} {simulator_name} simulation...")
 
     dim = np.shape(samples)[0]
-
-    colors = ["firebrick", "black", "dimgray", "darkred", "brown", "maroon", "gray", "darkslategray"]
-    n_colors = len(colors)
-    custom_cmap = mcolors.LinearSegmentedColormap.from_list("custom_cmap", colors, N=n_colors)
-    if dim == 1:
-        cpt_colors = ["firebrick"]  
-    else:
-        cpt_colors = [custom_cmap(i / (dim - 1)) for i in range(dim)]
+    # Format colours
+    cpt_colors = set_colors(dim)
     # Create figure and plot
     fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, figsize=figsize)
     for cpt in range(dim):
         ax1.plot(samples[cpt, :], color=cpt_colors[cpt], alpha=0.6, label=f'Samples[{cpt}]', linewidth=1)
-    if dim < 5:
-        ax1.legend(frameon=True, facecolor='white', edgecolor='none', fontsize=14)
     
     for cpt in range(dim):
-        ax2.plot(samples[cpt, :][:500], color=cpt_colors[cpt], alpha=0.6, label=f'Samples[{cpt}][0:500]', linewidth=1)
-    if dim < 5:
-        ax2.legend(frameon=True, facecolor='white', edgecolor='none', fontsize=14)
+        ax2.plot(samples[cpt, :][:initial_samples], color=cpt_colors[cpt], alpha=0.6, label=f'Samples[{cpt}][0:{initial_samples}]', linewidth=1)
     
     for cpt in range(dim):
         ax3.hist(samples[cpt, :], bins=50, color=cpt_colors[cpt], alpha=0.6, label=f'Samples[{cpt}]')
-    if dim < 5:
-        ax3.legend(frameon=True, facecolor='white', edgecolor='none', fontsize=14)
     
     for cpt in range(dim):
         cdf_values = []
         sorted_samples = np.sort(samples[cpt, :])
         cdf_values = np.arange(1, len(sorted_samples) + 1) / len(sorted_samples)
         ax4.plot(sorted_samples, cdf_values, color=cpt_colors[cpt], alpha=0.6, label=f'Samples[{cpt}]', linewidth=1)
+    # Create legends 
     if dim < 5:
+        ax1.legend(frameon=True, facecolor='white', edgecolor='none', fontsize=14)
+        ax2.legend(frameon=True, facecolor='white', edgecolor='none', fontsize=14)
+        ax3.legend(frameon=True, facecolor='white', edgecolor='none', fontsize=14)
         ax4.legend(frameon=True, facecolor='white', edgecolor='none', fontsize=14)
     
     fig.suptitle(f'{target_name} {simulator_name} {np.shape(samples)[1]} samples', fontsize=32, y=0.93)
@@ -82,7 +69,7 @@ def plot_samples(directory, figsize=(16, 20)):
 
     plt.close()
 
-def plot_zigzag(directory, target_name, simulator_name, num_events=200, normalised=False, figsize=(10, 8)):
+def plot_zigzag(directory, num_events=200, normalised=False, figsize=(10, 8)):
     """
     Plots zigzag trajectory from initial value to end point defined by num_points. 
     Trajectory visualises events and velocity flips.
@@ -91,51 +78,45 @@ def plot_zigzag(directory, target_name, simulator_name, num_events=200, normalis
     ---
     directory: str
         Path to directory containing simulation files.
-    method: str
-        Simulation method name 
+    num_events: int
+        Number of events to plot.
     normalised: bool
-        Normalise data to remove gaps
+        Normalise data for compactness.
     figsize: tuple
-        Size of figure
-    num_points: int 
-        Number of events to display on trajectory
+        Size of figure.
     """
-    print(f"\nPlotting zigzag for {target_name} {simulator_name} simulation...")
-
-    fig, ax = plt.subplots(figsize=figsize)
-
     try:
         event_states_path = os.path.join(directory, f"event_states.npy")
     except:
         raise FileNotFoundError(f"{event_states_path} not found")
     event_states = np.load(event_states_path)
 
-    json_path = os.path.join(directory, 'output.json')
-    if os.path.exists(json_path):
-        try:
-            with open(json_path, 'r') as f:
-                data = json.load(f)
-        except json.JSONDecodeError:
-                data = {}
+    output_path = os.path.join(directory, 'output.json')
+    output = read_json(output_path)
+
+    target_name = output['target_name']
+    simulator_name = output['simulator_name']
+
     try:
-        thinned_acceptance_rate = data['thinned_acceptance_rate']  
+        thinned_acceptance_rate = output['thinned_acceptance_rate']  
     except:
         thinned_acceptance_rate = 1
-    # Scale data to remove gaps
+
+    print(f"\nPlotting zigzag for {target_name} {simulator_name} simulation...")
+
     x = event_states[0, :int(num_events / thinned_acceptance_rate)] 
     y = event_states[1, :int(num_events / thinned_acceptance_rate)]
-    # Normalise the data to remove gaps
+    # Normalise for compactness
     if normalised:
         x = (x - x.min()) / (x.max() - x.min())
         y = (y - y.min()) / (y.max() - y.min())
     # Plot segments with gradient color using normalized data
+    fig, ax = plt.subplots(figsize=figsize)
     ax.plot(x,y)
-    # Add start and end points on normalized data
-    ax.scatter(x[0], y[0], 
-              color='green', s=100, label='Start',
+    # Add start and end points
+    ax.scatter(x[0], y[0], color='green', s=100, label='Start',
               zorder=5, edgecolor='white', linewidth=2)
-    ax.scatter(x[-1], y[-1], 
-              color='red', s=100, label='End',
+    ax.scatter(x[-1], y[-1], color='red', s=100, label='End',
               zorder=5, edgecolor='white', linewidth=2)
     
     ax.grid(True, linestyle='--', alpha=0.7)
@@ -152,7 +133,7 @@ def plot_zigzag(directory, target_name, simulator_name, num_events=200, normalis
     
     plt.close()
 
-def compare_cdf(directory, target_name, simulator_name, reference_simulator_name):
+def compare_cdf(directory, do_cvm_test=False):
     """
     Compare CDFs of simulation samples from two different methods to test for 
     convergence to same stationary distribution.
@@ -161,43 +142,41 @@ def compare_cdf(directory, target_name, simulator_name, reference_simulator_name
     ---
     directory: str
         Path to directory containing simulation files.
-    method1: str
-        Simulation method1 name 
-    method2: str        
-        Simulation method2 name
     """
+    # Identify file paths
+    samples_path = os.path.join(directory, f"position_samples.npy")
+    reference_samples_path = os.path.join(directory, f"reference/position_samples.npy")
+    output_path = os.path.join(directory, 'output.json')
+    reference_output_path = os.path.join(directory, 'reference/output.json')
+    # Load files
+    samples = np.load(samples_path)
+    samples = np.atleast_2d(samples)
+    reference_samples = np.load(reference_samples_path)
+    reference_samples = np.atleast_2d(reference_samples)
+    # Load output
+    output = read_json(output_path)
+    reference_output = read_json(reference_output_path)
+
+    target_name = output['target_name']
+    simulator_name = output['simulator_name']
+    reference_simulator_name = reference_output['simulator_name']
+
     print(f"\nComparing CDFs for {target_name} {simulator_name} and {reference_simulator_name} simulation samples...")
 
-    # Identify file paths
-    samples1_path = os.path.join(directory, f"position_samples.npy")
-    samples2_path = os.path.join(directory, f"reference/position_samples.npy")
-    # Load files
-    samples1 = np.load(samples1_path)
-    samples1 = np.atleast_2d(samples1)
-    samples2 = np.load(samples2_path)
-    samples2 = np.atleast_2d(samples2)
+    dim = np.shape(samples)[0]
 
-    dim = np.shape(samples1)[0]
-
-    colors = ["firebrick", "black", "dimgray", "darkred", "brown", "maroon", "gray", "darkslategray"]
-    n_colors = len(colors)
-    custom_cmap = mcolors.LinearSegmentedColormap.from_list("custom_cmap", colors, N=n_colors)
-    if dim == 1:
-        cpt_colors = ["firebrick"]  
-    else:
-        cpt_colors = [custom_cmap(i / (dim - 1)) for i in range(dim)]
+    cpt_colors = set_colors(dim)
     # Create figure and plot
     fig, ax = plt.subplots()
-    # Create cdf 1
     for cpt in range(dim):
-        sorted_samples1 = np.sort(samples1[cpt, :])
-        cdf_values1 = np.arange(1, len(sorted_samples1) + 1) / len(sorted_samples1)
-        ax.plot(sorted_samples1, cdf_values1, linestyle = '-', color = cpt_colors[cpt], alpha=0.5, linewidth = 2, label=f'{simulator_name}[{cpt}]')
-    # Create cdf 2
-    for cpt in range(dim):
-        sorted_samples2 = np.sort(samples2[cpt, :])
-        cdf_values2 = np.arange(1, len(sorted_samples2) + 1) / len(sorted_samples2)
-        ax.plot(sorted_samples2, cdf_values2, linestyle = '--', color = cpt_colors[cpt], alpha=0.5, label=f'{reference_simulator_name}[{cpt}]')
+        # CDF 1
+        sorted_samples = np.sort(samples[cpt, :])
+        cdf_values1 = np.arange(1, len(sorted_samples) + 1) / len(sorted_samples)
+        ax.plot(sorted_samples, cdf_values1, linestyle = '-', color = cpt_colors[cpt], alpha=0.5, linewidth = 2, label=f'{simulator_name}[{cpt}]')
+        # CDF 2
+        sorted_reference_samples = np.sort(reference_samples[cpt, :])
+        cdf_values2 = np.arange(1, len(sorted_reference_samples) + 1) / len(sorted_reference_samples)
+        ax.plot(sorted_reference_samples, cdf_values2, linestyle = '--', color = cpt_colors[cpt], alpha=0.5, label=f'{reference_simulator_name}[{cpt}]')
     
     ax.grid(True, linestyle="--", linewidth=0.5, color="gray", alpha=0.6)
     ax.set_xlabel('x', fontsize=12, color='black')
@@ -211,31 +190,25 @@ def compare_cdf(directory, target_name, simulator_name, reference_simulator_name
     print(f"Compare CDF plot saved to {output_file}")
 
     plt.close()
-     
-def pdmp_ks_test(samples, dist, method):
-    """
-    Performs Kolmogorov-Smirnov test on simulation samples to test for convergence
-    to the provided distribution.
-    
-    Parameters
-    ---
-    samples: np.array
-        Samples to test.
-    dist: str
-        Distribution to test against e.g. 'norm', 'expon', 'uniform'. 
-    method: str
-        Simulation method name.
-    """    
-    print(f"\nPerforming KS test for {method}...")
 
-    from scipy.stats import kstest
-    _, p = kstest(samples, dist, args=(np.mean(samples), np.std(samples)))
-    if p > 0.05:
-        print(f"{method} samples are likely normally distributed, p = {p}")
-    else:
-        print(f"{method} Samples are likely not normally distributed, p = {p}")
+    if do_cvm_test:
+        from scipy.stats import cramervonmises_2samp
+        cvm_test_p_values = []
+        print(f"\nPerforming Cramer-von Mises test for {target_name} {simulator_name} and" 
+              f"{reference_simulator_name} simulation samples...")
+        for cpt in range(dim):
+            result = cramervonmises_2samp(samples[cpt, :], reference_samples[cpt, :])
+            cvm_test_p_values.append(result.pvalue)
+            if result.pvalue > 0.05:
+                print(f"Samples[{cpt}] are likely from the same distribution, p = {result.statistic}")
+            else:
+                print(f"Samples[{cpt}] are likely not from the same distribution, p = {result.statistic}")
 
-def autocorr(directory, max_lag, target_name, simulator_name, do_write_autocorr_samples=False, do_plot_autocorr=False):
+        with open(output_path, 'w') as f:
+            output['cvm_test_p_values'] = cvm_test_p_values
+            json.dump(output, f, indent=4)
+
+def autocorr(directory, max_lag=50, autocorr_method='componentwise', do_write_autocorr_samples=False, do_plot_autocorr=False):
     """
     Returns the autocorrelation of simulation samples as a function of lag up to
     the provided max_lag. Also returns the integrated autocorrelation function (IAT)
@@ -254,21 +227,36 @@ def autocorr(directory, max_lag, target_name, simulator_name, do_write_autocorr_
     do_plot_autocorr: bool
         Plot autocorrelation samples
     """
-    print(f"\nCalculating autocorrelation for {target_name} {simulator_name} simulation samples...")
-
     max_lag = int(max_lag)
     # Identify file paths
     samples_path = os.path.join(directory, f"position_samples.npy")
+    output_path = os.path.join(directory, f"output.json")
     # Load files
-    samples = np.load(samples_path).flatten()
-    mean = np.mean(samples)
-    var = np.var(samples)
-    autocorr_samples = [(np.mean(samples[k:] * samples[:-k]) - mean ** 2) / var for k in range(1, max_lag + 1)]
-    autocorr_samples = np.insert(autocorr_samples, 0, 1)
-    
-    # Calculation integrated autocorrelation time
-    iat = 1 + 2 * np.sum(autocorr_samples)
-    eff_sample_size = len(samples) / iat
+    samples = np.load(samples_path)
+    samples = np.atleast_2d(samples)
+    output = read_json(output_path)
+
+    target_name = output['target_name']
+    simulator_name = output['simulator_name']
+
+    dim = np.shape(samples)[0]
+    # Calculate autocorrelation
+    if autocorr_method == 'componentwise':
+        autocorr_samples = np.zeros((dim, max_lag + 1))
+        iat = [] 
+        eff_sample_size = []
+        for cpt in range(dim):
+            mean = np.mean(samples[cpt])
+            var = np.var(samples[cpt])
+            autocorr_samples_cpt = [(np.mean(samples[cpt][k:] * samples[cpt][:-k]) - mean ** 2) / var for k in range(1, max_lag + 1)]
+            autocorr_samples_cpt = np.insert(autocorr_samples_cpt, 0, 1)
+            autocorr_samples[cpt, :] = autocorr_samples_cpt
+            # Calculation integrated autocorrelation time
+            iat_cpt = 1 + 2 * np.sum(autocorr_samples_cpt)
+            iat.append(iat_cpt)
+            eff_sample_size_cpt = len(samples[cpt, :]) / iat_cpt 
+            eff_sample_size.append(eff_sample_size_cpt)
+
     # Write autocorrelation samples
     if do_write_autocorr_samples:
         write_npy(directory, **{f"autocorr_samples": autocorr_samples})
@@ -276,31 +264,23 @@ def autocorr(directory, max_lag, target_name, simulator_name, do_write_autocorr_
     # Plot autocorrelation samples
     if do_plot_autocorr:
         fig, ax = plt.subplots()
-        ax.plot(autocorr_samples)
+        cpt_colors = set_colors(dim)
+        for cpt in range(dim):
+            ax.plot(autocorr_samples[cpt, :], color=cpt_colors[cpt], alpha=0.6, label=f'Autocorr[{cpt}]', linewidth=1)
+        
         output_file = os.path.join(directory, f"autocorr_plot.png")
         plt.savefig(output_file, dpi=400)
         print(f"{target_name} {simulator_name} samples autocorrelation plot saved to {output_file}")
     
-    # Read existing parameters JSON
-    json_path = os.path.join(directory, f"output.json")
-    if os.path.exists(json_path):
-        try:
-            with open(json_path, 'r') as f:
-                data = json.load(f)
-        except json.JSONDecodeError:
-            data = {}
-    else:
-        data = {}
-    
-    # Write IAT to JSON
-    data['iat'] = iat 
-    data['eff_sample_size'] = eff_sample_size
-    with open(json_path, 'w') as f:
-         json.dump(data, f, indent=4)
+    # Write IAT and effective sample size
+    output['iat'] = iat 
+    output['eff_sample_size'] = eff_sample_size
+    with open(output_path, 'w') as f:
+         json.dump(output, f, indent=4)
 
-    return autocorr_samples, iat, eff_sample_size
+    return autocorr_samples, iat, eff_sample_size, dim
 
-def compare_autocorr(directory, max_lag, target_name, simulator_name, reference_simulator_name, do_write_autocorr_samples=False):
+def compare_autocorr(directory, max_lag=50, autocorr_method='componentwise', do_write_autocorr_samples=False):
     """
     Plots autocorrelation samples as a function of lag for two provided methods for
     comparison. 
@@ -311,27 +291,35 @@ def compare_autocorr(directory, max_lag, target_name, simulator_name, reference_
         Path to directory containing simulation files.
     max_lag: int
         Maximum lag for autocorrelation calculation
-    method1: str
-        Simulation method1 name
-    method2: str
-        Simulation method2 name
     do_write_autocorr_samples: bool
         Write autocorrelation samples to file
     do_compare_autocorr: bool
         Compare autocorrelation samples from different methods
     """
+    output_path = os.path.join(directory, f"output.json")
+    reference_output_path = os.path.join(directory, 'reference/output.json')
+    output = read_json(output_path)
+    reference_output = read_json(reference_output_path)
+
+    target_name = output['target_name']
+    simulator_name = output['simulator_name']
+    reference_simulator_name = reference_output['simulator_name']
+    
     print(f"\nComparing correlation functions for {target_name} {simulator_name} and {reference_simulator_name} simulations...")
 
     reference_directory = os.path.join(directory, 'reference')
-    autocorr1, iat1, N_eff1 = autocorr(directory, max_lag, target_name, simulator_name, do_write_autocorr_samples)
-    autocorr2, iat2, N_eff2 = autocorr(reference_directory, max_lag, target_name, reference_simulator_name, do_write_autocorr_samples) 
+    autocorr1, iat1, eff_sample_size1, dim = autocorr(directory, max_lag, autocorr_method, do_write_autocorr_samples)
+    autocorr2, iat2, eff_sample_size2, _ = autocorr(reference_directory, max_lag, autocorr_method, do_write_autocorr_samples) 
     # Plot
     fig, ax = plt.subplots()
-    ax.plot(autocorr1, linestyle = '-', color = 'r', alpha=0.5, label = f'{simulator_name}:\nIAT = {iat1:.2f}, N_eff = {N_eff1:.0f}')
-    ax.plot(autocorr2, linestyle = '--', color = 'k', alpha=0.5, label = f'{reference_simulator_name}:\nIAT = {iat2:.2f}, N_eff = {N_eff2:.0f}')
+    cpt_colors = set_colors(dim)
+    for cpt in range(dim):
+        ax.plot(autocorr1[cpt, :], linestyle='-', color=cpt_colors[cpt], alpha=0.5, label=f'{simulator_name}[{cpt}]:\nIAT = {iat1[cpt]:.2f}, N_eff = {eff_sample_size1[cpt]:.0f}')
+        ax.plot(autocorr2[cpt, :], linestyle='--', color=cpt_colors[cpt], alpha=0.5, label=f'{reference_simulator_name}[{cpt}]:\nIAT = {iat2[cpt]:.2f}, N_eff = {eff_sample_size2[cpt]:.0f}')
+    
     ax.set_xlabel('Lag')
     ax.set_ylabel('Autocorrelation')
-    fig.suptitle(f'{target_name} Autocorrelation Comparison', fontsize=14, y=0.95)
+    fig.suptitle(f'{target_name} {autocorr_method.capitalize()} Autocorrelation Comparison', fontsize=14, y=0.95)
     ax.legend(frameon=True, facecolor='white', edgecolor='none', fontsize=10)
     # Save files
     output_file = os.path.join(directory, f"compare_autocorr_plot.png")
@@ -340,7 +328,7 @@ def compare_autocorr(directory, max_lag, target_name, simulator_name, reference_
 
     plt.close()
 
-def mean_squared_displacement(directory, target_name, simulator_name):
+def mean_squared_displacement(directory):
     """
     Returns mean squared displacement of samples.
     
@@ -353,12 +341,17 @@ def mean_squared_displacement(directory, target_name, simulator_name):
     mean: float
 
     """
-    print(f"Calculating mean squared displacement for {target_name} {simulator_name} samples...")
-
-    # Identify file path
+    # Identify file paths
     samples_path = os.path.join(directory, f"position_samples.npy")
+    output_path = os.path.join(directory, 'output.json')
     # Load files
     samples = np.load(samples_path)
+    output = read_json(output_path)
+
+    target_name = output['target_name']
+    simulator_name = output['simulator_name']
+
+    print(f"Calculating mean squared displacement for {target_name} {simulator_name} samples...")    
 
     # Calculate mean squared displacement
     mean = np.mean(samples)
@@ -382,7 +375,7 @@ def mean_squared_displacement(directory, target_name, simulator_name):
 
     return msd
 
-def compare_norm_cdf(directory, target_name, simulator_name, reference_simulator_name):
+def compare_norm_cdf(directory):
     """
     Compare CDFs of norm of 2D simulation samples from two different methods to test for
     convergence to same stationary distribution.
@@ -398,30 +391,38 @@ def compare_norm_cdf(directory, target_name, simulator_name, reference_simulator
     reference_simulator_name: str    
         Name of the reference simulation method.
     """
-    print(f"\nComparing norm CDFs for {target_name} {simulator_name} and {reference_simulator_name} simulation samples...")
-
     # Identify file paths
-    samples1_path = os.path.join(directory, f"position_samples.npy")
-    samples2_path = os.path.join(directory, f"reference/position_samples.npy")
+    samples_path = os.path.join(directory, f"position_samples.npy")
+    reference_samples_path = os.path.join(directory, f"reference/position_samples.npy")
+    output_path = os.path.join(directory, 'output.json')
+    reference_output_path = os.path.join(directory, 'reference/output.json')
     # Load files
-    samples1 = np.load(samples1_path)
-    samples1 = np.atleast_2d(samples1)
-    samples2 = np.load(samples2_path)
-    samples2 = np.atleast_2d(samples2)
-    dim = np.shape(samples1)[0]
+    samples = np.load(samples_path)
+    samples = np.atleast_2d(samples)
+    reference_samples = np.load(reference_samples_path)
+    reference_samples = np.atleast_2d(reference_samples)
+    output = read_json(output_path)
+    reference_output = read_json(reference_output_path)
+    dim = np.shape(samples)[0]
+
+    target_name = output['target_name']
+    simulator_name = output['simulator_name']
+    reference_simulator_name = reference_output['simulator_name']
+
+    print(f"\nComparing norm CDFs for {target_name} {simulator_name} and {reference_simulator_name} simulation samples...")
     # Calculate norm
-    samples1 = np.array(sum(samples1[i, :]**2 for i in range(dim)))**0.5
-    samples2 = np.array(sum(samples2[i, :]**2 for i in range(dim)))**0.5
+    samples = np.array(sum(samples[i, :]**2 for i in range(dim)))**0.5
+    reference_samples = np.array(sum(reference_samples[i, :]**2 for i in range(dim)))**0.5
 
     fig, ax = plt.subplots()
     # Create cdf 1
-    sorted_samples1 = np.sort(samples1)
-    cdf_values1 = np.arange(1, len(sorted_samples1) + 1) / len(sorted_samples1)
-    ax.plot(sorted_samples1, cdf_values1, linestyle = '-', color = 'r', alpha=0.5, linewidth = 2, label = simulator_name)
+    sorted_samples = np.sort(samples)
+    cdf_values1 = np.arange(1, len(sorted_samples) + 1) / len(sorted_samples)
+    ax.plot(sorted_samples, cdf_values1, linestyle = '-', color = 'r', alpha=0.5, linewidth = 2, label = simulator_name)
     # Create cdf 2
-    sorted_samples2 = np.sort(samples2)
-    cdf_values2 = np.arange(1, len(sorted_samples2) + 1) / len(sorted_samples2)
-    ax.plot(sorted_samples2, cdf_values2, linestyle = '--', color = 'k', alpha=0.5, label = reference_simulator_name)
+    sorted_reference_samples = np.sort(reference_samples)
+    cdf_values2 = np.arange(1, len(sorted_reference_samples) + 1) / len(sorted_reference_samples)
+    ax.plot(sorted_reference_samples, cdf_values2, linestyle = '--', color = 'k', alpha=0.5, label = reference_simulator_name)
     ax.grid(True, linestyle="--", linewidth=0.5, color="gray", alpha=0.6)
     ax.set_xlabel('Norm', fontsize=12, color='black')
     ax.set_ylabel('CDF', fontsize=12, color='black')
