@@ -12,7 +12,7 @@ pip install -r requirements.txt (requirements tbc)
 ```
 
 ## Configuration 
-Configuration can be set within the config.ini file. 
+Configuration files can be found in /config_files.
 ### Example Configuration
 ```bash
 [Run]
