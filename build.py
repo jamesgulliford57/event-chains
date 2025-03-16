@@ -47,10 +47,10 @@ def main(config_file):
     do_timestamp = config.getboolean("Analysis", "do_timestamp")
     do_plot_samples = config.getboolean("Analysis", "do_plot_samples")
     do_plot_zigzag = config.getboolean("Analysis", "do_plot_zigzag")
+    normalise_zigzag = config.getboolean("Analysis", "normalise_zigzag")
 
     do_compare_cdf = config.getboolean("Analysis", "do_compare_cdf")
     do_norm_compare_cdf = config.getboolean("Analysis", "do_norm_compare_cdf")
-    do_cvm_test = config.getboolean("Analysis", "do_cvm_test")
 
     do_autocorr = config.getboolean("Analysis", "do_autocorr")
     max_lag = config.getint("Analysis", "max_lag")
@@ -108,7 +108,7 @@ def main(config_file):
             anl.plot_samples(reference_output_dir)
     if do_plot_zigzag:
         if dim == 2:
-            anl.plot_zigzag(output_dir)
+            anl.plot_zigzag(output_dir, normalised=normalise_zigzag)
         else:
             print("Zigzag plot only available for 2D targets. Skipping...")
     if do_autocorr:
@@ -122,7 +122,7 @@ def main(config_file):
 
     # Joint analysis
     if do_compare_cdf:
-            anl.compare_cdf(output_dir, do_cvm_test)
+            anl.compare_cdf(output_dir)
     if do_norm_compare_cdf:
             anl.compare_norm_cdf(output_dir)
     if do_compare_autocorr:

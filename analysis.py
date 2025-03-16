@@ -28,27 +28,25 @@ def plot_samples(directory, initial_samples=500, figsize=(16, 20)):
     samples = np.load(samples_path)
     samples = np.atleast_2d(samples)
     output = read_json(output_path)
-
+    # Load variables from output dict
     target_name = output['target_name']
     simulator_name = output['simulator_name']
 
     print(f"\nPlotting samples for {target_name} {simulator_name} simulation...")
-
+    # Number of model components 
     dim = np.shape(samples)[0]
     # Format colours
     cpt_colors = set_colors(dim)
     # Create figure and plot
     fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, figsize=figsize)
     for cpt in range(dim):
+        # Plot all samples
         ax1.plot(samples[cpt, :], color=cpt_colors[cpt], alpha=0.6, label=f'Samples[{cpt}]', linewidth=1)
-    
-    for cpt in range(dim):
+        # Plot first {initial_samples} samples
         ax2.plot(samples[cpt, :][:initial_samples], color=cpt_colors[cpt], alpha=0.6, label=f'Samples[{cpt}][0:{initial_samples}]', linewidth=1)
-    
-    for cpt in range(dim):
+        # Plot empirical PDF
         ax3.hist(samples[cpt, :], bins=50, color=cpt_colors[cpt], alpha=0.6, label=f'Samples[{cpt}]')
-    
-    for cpt in range(dim):
+        # Plot empirical CDF
         cdf_values = []
         sorted_samples = np.sort(samples[cpt, :])
         cdf_values = np.arange(1, len(sorted_samples) + 1) / len(sorted_samples)
@@ -62,7 +60,7 @@ def plot_samples(directory, initial_samples=500, figsize=(16, 20)):
     
     fig.suptitle(f'{target_name} {simulator_name} {np.shape(samples)[1]} samples', fontsize=32, y=0.93)
     
-    # Save output to file
+    # Save output plot
     output_file = os.path.join(directory, f"samples_plot.png")
     plt.savefig(output_file, dpi=400)
     print(f"{target_name} {simulator_name} samples plot saved to {output_file}")
@@ -71,8 +69,7 @@ def plot_samples(directory, initial_samples=500, figsize=(16, 20)):
 
 def plot_zigzag(directory, num_events=200, normalised=False, figsize=(10, 8)):
     """
-    Plots zigzag trajectory from initial value to end point defined by num_points. 
-    Trajectory visualises events and velocity flips.
+    Plots zigzag trajectory. Trajectory visualises events and velocity flips.
     
     Parameters
     ---
@@ -85,32 +82,29 @@ def plot_zigzag(directory, num_events=200, normalised=False, figsize=(10, 8)):
     figsize: tuple
         Size of figure.
     """
+    # Look for event states
     try:
         event_states_path = os.path.join(directory, f"event_states.npy")
     except:
         raise FileNotFoundError(f"{event_states_path} not found")
     event_states = np.load(event_states_path)
-
+    # Identify file paths
     output_path = os.path.join(directory, 'output.json')
+    # Load files
     output = read_json(output_path)
-
+    # Load variables from output dict
     target_name = output['target_name']
     simulator_name = output['simulator_name']
 
-    try:
-        thinned_acceptance_rate = output['thinned_acceptance_rate']  
-    except:
-        thinned_acceptance_rate = 1
-
     print(f"\nPlotting zigzag for {target_name} {simulator_name} simulation...")
 
-    x = event_states[0, :int(num_events / thinned_acceptance_rate)] 
-    y = event_states[1, :int(num_events / thinned_acceptance_rate)]
+    x = event_states[0, :int(num_events)] 
+    y = event_states[1, :int(num_events)]
     # Normalise for compactness
     if normalised:
         x = (x - x.min()) / (x.max() - x.min())
         y = (y - y.min()) / (y.max() - y.min())
-    # Plot segments with gradient color using normalized data
+
     fig, ax = plt.subplots(figsize=figsize)
     ax.plot(x,y)
     # Add start and end points
@@ -133,7 +127,7 @@ def plot_zigzag(directory, num_events=200, normalised=False, figsize=(10, 8)):
     
     plt.close()
 
-def compare_cdf(directory, do_cvm_test=False):
+def compare_cdf(directory):
     """
     Compare CDFs of simulation samples from two different methods to test for 
     convergence to same stationary distribution.
@@ -191,23 +185,6 @@ def compare_cdf(directory, do_cvm_test=False):
 
     plt.close()
 
-    if do_cvm_test:
-        from scipy.stats import cramervonmises_2samp
-        cvm_test_p_values = []
-        print(f"\nPerforming Cramer-von Mises test for {target_name} {simulator_name} and" 
-              f"{reference_simulator_name} simulation samples...")
-        for cpt in range(dim):
-            result = cramervonmises_2samp(samples[cpt, :], reference_samples[cpt, :])
-            cvm_test_p_values.append(result.pvalue)
-            if result.pvalue > 0.05:
-                print(f"Samples[{cpt}] are likely from the same distribution, p = {result.statistic}")
-            else:
-                print(f"Samples[{cpt}] are likely not from the same distribution, p = {result.statistic}")
-
-        with open(output_path, 'w') as f:
-            output['cvm_test_p_values'] = cvm_test_p_values
-            json.dump(output, f, indent=4)
-
 def autocorr(directory, max_lag=50, autocorr_method='componentwise', do_write_autocorr_samples=False, do_plot_autocorr=False):
     """
     Returns the autocorrelation of simulation samples as a function of lag up to
@@ -219,13 +196,13 @@ def autocorr(directory, max_lag=50, autocorr_method='componentwise', do_write_au
     directory: str
         Path to directory containing simulation files.
     max_lag: int
-        Maximum lag for autocorrelation calculation
-    method: str
-        Simulation method name
+        Maximum lag for autocorrelation calculation.
+    autocorr_method: str
+        Method for calculating autocorrelation.
     do_write_autocorr_samples: bool
-        Write autocorrelation samples to file
+        Write autocorrelation samples to file.
     do_plot_autocorr: bool
-        Plot autocorrelation samples
+        Plot autocorrelation samples.
     """
     max_lag = int(max_lag)
     # Identify file paths
@@ -290,11 +267,13 @@ def compare_autocorr(directory, max_lag=50, autocorr_method='componentwise', do_
     directory: str
         Path to directory containing simulation files.
     max_lag: int
-        Maximum lag for autocorrelation calculation
+        Maximum lag for autocorrelation calculation.
+    autocorr_method: str
+        Method for calculating autocorrelation.
     do_write_autocorr_samples: bool
-        Write autocorrelation samples to file
+        Write autocorrelation samples to file.
     do_compare_autocorr: bool
-        Compare autocorrelation samples from different methods
+        Compare autocorrelation samples from different methods.
     """
     output_path = os.path.join(directory, f"output.json")
     reference_output_path = os.path.join(directory, 'reference/output.json')
@@ -336,10 +315,6 @@ def mean_squared_displacement(directory):
     ---
     directory: str
         Path to directory containing simulation files.
-    method: str
-        Simulation method name
-    mean: float
-
     """
     # Identify file paths
     samples_path = os.path.join(directory, f"position_samples.npy")
@@ -384,12 +359,6 @@ def compare_norm_cdf(directory):
     ---
     directory: str
         Path to directory containing simulation files.
-    target_name: str
-        Name of the target distribution.
-    simulator_name: str
-        Name of the simulation method.
-    reference_simulator_name: str    
-        Name of the reference simulation method.
     """
     # Identify file paths
     samples_path = os.path.join(directory, f"position_samples.npy")

@@ -13,10 +13,14 @@ class EventChainSimulator(Simulator):
         ---
         num_samples : int
             Number of samples to simulate.
+        x0 : float, list
+            Initial state of the chain.
+        simulator_specific_params : dict
+            Parameters specific to the event chain simulator.
         """ 
         super().__init__(target=target, num_samples=num_samples, x0=x0, simulator_specific_params=simulator_specific_params)
 
-        if type(self.v0) == float or type(self.v0) == int:
+        if isinstance(self.v0, (float, int)):
             self.v0 = [self.v0]
         self.v = np.array(self.v0) 
 
@@ -42,38 +46,50 @@ class EventChainSimulator(Simulator):
         Parameters
         ---
         component_to_flip : int
-            Component of the state to flip.
+            Component of the state to flip at event.
         """
         return self.target.event_rate(self.x, self.v)[component_to_flip] / self.target.event_rate_bound(self.x, self.v)[component_to_flip]
 
     def sim_chain(self):
         """
-        Performs simulation loop.
+        Performs ecmc simulation.
         
         """
-        
+        # Reset state and time variables
+        self.x = np.array(self.x0)
+        self.v = np.array(self.v0)
         time = 0.0
         events = 0
-        event_times = [0]
+        event_times = [0.0]
         event_states = [self.x] 
-        while time < self.final_time:
-            event_time, component_to_flip = self.find_next_event_time()
-            self.x = self.x + self.v * event_time
-            time += event_time
-            event_states.append(self.x.copy())
-            event_times.append(time)
-            # For thinned simulation, only flip the velocity if the event is accepted
-            if self.poisson_thinned:
+        # Simulate Poisson thinned chain if specified
+        if self.poisson_thinned:
+            proposed_events = 0
+            while time < self.final_time:
+                event_time, component_to_flip = self.find_next_event_time()
+                self.x = self.x + self.v * event_time
+                time += event_time
+                proposed_events += 1
                 if np.random.rand() < self._thinned_acceptance_prob(component_to_flip):
+                    event_states.append(self.x.copy())
+                    event_times.append(time)
                     self.v[component_to_flip] = -self.v[component_to_flip]
                     events += 1
-                    if events % 10000 == 0 and events > 10000:
-                        print(f"{events} events occured.")
-            else:
-                # For the non-Poisson-thinned PDMP, always flip the velocity after each event
+                if proposed_events % 10000 == 0 and proposed_events > 0:
+                        print(f"{proposed_events} events proposed. {events} events accepted.")
+            
+        else:
+            # Simulate chain
+            while time < self.final_time:
+                event_time, component_to_flip = self.find_next_event_time()
+                self.x = self.x + self.v * event_time
+                time += event_time
+                event_states.append(self.x.copy())
+                event_times.append(time)
+
                 self.v[component_to_flip] = -self.v[component_to_flip]
                 events += 1  
-                if events % 10000 == 0 and events > 10000:
+                if events % 10000 == 0 and events > 0:
                     print(f"{events} events occured.")
 
         # Convert to arrays, 1 dimension per row
@@ -89,7 +105,7 @@ class EventChainSimulator(Simulator):
                 position_samples[i, :] = np.interp(sample_times, event_times, event_states[i, :])
         # If using thinning, calculate and record the acceptance rate
         if self.poisson_thinned:
-            self.thinned_acceptance_rate = events / len(event_times)
+            self.thinned_acceptance_rate = events / proposed_events
 
         print(f"Event chain simulation complete. {self.num_samples} samples generated")
         

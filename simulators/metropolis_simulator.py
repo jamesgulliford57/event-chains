@@ -12,6 +12,8 @@ class MetropolisSimulator(Simulator):
         
         Parameters:
         ---
+        trarget : Target
+            Target distribution to simulate.
         num_samples : int
             Number of samples to simulate.
         x0 : float, list
@@ -31,15 +33,15 @@ class MetropolisSimulator(Simulator):
         Parameters:
         ---
         x : float, list
-            Current state of the random walk.
+            Current state.
         y : float, list
-            Proposed state of the random walk.
+            Proposed state.
         """
         return min(1, self.target.pdf(y) / self.target.pdf(x) * self.noise_distribution.transition_prob(y, x) / self.noise_distribution.transition_prob(x, y))
 
     def sim_chain(self):
         """
-        Perform simulation loop.
+        Perform Metropolis simulation.
         """
 
         accepted = 0

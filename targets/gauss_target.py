@@ -23,9 +23,27 @@ class GaussTarget(Target):
                          dim=dim, target_params=target_params)
     
     def pdf(self, x):
+        """
+        Probability density function of the target distribution.
+        
+        Parameters
+        ---
+        x : float, list
+            Input to the pdf.
+        """
         return mvnorm.pdf(x, mean=self.mu_target*np.ones(self.dim), cov=self.sigma_target**2*np.eye(self.dim))
     
     def event_time_func(self, x, v):
+        """
+        Event time function for the Gaussian target.
+
+        Parameters
+        ---
+        x : float, list
+            Current state.
+        v : float, list
+            Current velocity.
+        """
         a = (x - self.mu_target) * v
         event_times = []
         for cpt in a: 
@@ -36,9 +54,29 @@ class GaussTarget(Target):
         return min(event_times), np.argmin(event_times)
     
     def event_rate_bound(self, x, v):
+        """
+        Event rate bound for the Gaussian target for Poisson thinning.
+
+        Parameters
+        ---
+        x : float, list
+            Current state.
+        v : float, list
+            Current velocity.
+        """
         return 5 * np.ones(self.dim)
     
     def event_rate(self, x, v):
+        """
+        Event rate for the Gaussian target.
+
+        Parameters
+        ---
+        x : float, list
+            Current state.
+        v : float, list
+            Current velocity.
+        """
         event_rates = []
         for x_cpt, v_cpt in zip(x, v):
             event_rate = np.maximum(0.0, v_cpt * (x_cpt - self.mu_target) / self.sigma_target**2)

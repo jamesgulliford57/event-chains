@@ -16,7 +16,7 @@ class Simulator(ABC):
         target : Target
             Target distribution to simulate.
         num_samples : int
-            Number of samples to simulate.
+            Number of samples to generate.
         x0 : float, list
             Initial state.
         simulator_specific_params : dict
@@ -60,6 +60,9 @@ class Simulator(ABC):
 
     @abstractmethod
     def sim_chain(self):
+        """
+        Abstract method for chain simulation methods.
+        """
         raise NotImplementedError
 
 

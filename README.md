@@ -1,7 +1,7 @@
 # Zig Zag 
 
 ## Overview
-Simulation of event chain MCMC processes.
+Simulation of event chain MCMC processes. This project is Work in Progress.
 
 ## Installation
 Clone the repository and install dependencies:
