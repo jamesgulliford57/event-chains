@@ -47,7 +47,8 @@ def main(config_file):
     do_timestamp = config.getboolean("Analysis", "do_timestamp")
     do_plot_samples = config.getboolean("Analysis", "do_plot_samples")
     do_plot_zigzag = config.getboolean("Analysis", "do_plot_zigzag")
-    normalise_zigzag = config.getboolean("Analysis", "normalise_zigzag")
+    if do_plot_zigzag:
+        normalise_zigzag = config.getboolean("Analysis", "normalise_zigzag")
 
     do_compare_cdf = config.getboolean("Analysis", "do_compare_cdf")
     do_norm_compare_cdf = config.getboolean("Analysis", "do_norm_compare_cdf")
@@ -114,7 +115,7 @@ def main(config_file):
     if do_autocorr:
         anl.autocorr(output_dir, max_lag, autocorr_method, do_write_autocorr_samples, do_plot_autocorr)
         if do_reference_simulation:
-            anl.autocorr(reference_output_dir, max_lag, autocorr_method, do_write_autocorr_samples, do_plot_autocorr, reference_simulator_name)
+            anl.autocorr(reference_output_dir, max_lag, autocorr_method, do_write_autocorr_samples, do_plot_autocorr)
     if do_mean_squared_displacement:
         anl.mean_squared_displacement(output_dir)
         if do_reference_simulation:

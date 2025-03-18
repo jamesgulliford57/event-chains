@@ -21,6 +21,14 @@ def print_section(message, empty_lines_before=1, empty_lines_after=1):
     print("\n" * empty_lines_after, end="")  # Add empty lines after the section
 
 def timer(func):
+    """
+    Wrapper function to time the execution of a function.
+    
+    Parameters
+    ---
+    func : function
+        Function to be timed.
+    """
     from functools import wraps
     import time
     @wraps(func)

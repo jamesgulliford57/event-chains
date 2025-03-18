@@ -106,7 +106,7 @@ def set_colors(dim):
     """
     import matplotlib.colors as mcolors
 
-    colors = ["firebrick", "black", "dimgray", "darkred", "brown", "maroon", "gray", "darkslategray"]
+    colors = ["firebrick", "black", "blue", "dimgray", "darkred", "brown", "maroon", "gray", "darkslategray"]
     n_colors = len(colors)
     custom_cmap = mcolors.LinearSegmentedColormap.from_list("custom_cmap", colors, N=n_colors)
     if dim == 1:

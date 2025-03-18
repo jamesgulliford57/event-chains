@@ -185,7 +185,7 @@ def compare_cdf(directory):
 
     plt.close()
 
-def autocorr(directory, max_lag=50, autocorr_method='componentwise', do_write_autocorr_samples=False, do_plot_autocorr=False):
+def autocorr(directory, max_lag=50, autocorr_method='component', do_write_autocorr_samples=False, do_plot_autocorr=False):
     """
     Returns the autocorrelation of simulation samples as a function of lag up to
     the provided max_lag. Also returns the integrated autocorrelation function (IAT)
@@ -198,7 +198,9 @@ def autocorr(directory, max_lag=50, autocorr_method='componentwise', do_write_au
     max_lag: int
         Maximum lag for autocorrelation calculation.
     autocorr_method: str
-        Method for calculating autocorrelation.
+        Method for calculating autocorrelation. 
+        Options: 'component' : Calculate autocorrelation for each component separately.
+                 'vector' : Calculate autocorrelation for the vector norm of the samples.
     do_write_autocorr_samples: bool
         Write autocorrelation samples to file.
     do_plot_autocorr: bool
@@ -218,7 +220,7 @@ def autocorr(directory, max_lag=50, autocorr_method='componentwise', do_write_au
 
     dim = np.shape(samples)[0]
     # Calculate autocorrelation
-    if autocorr_method == 'componentwise':
+    if autocorr_method == 'component':
         autocorr_samples = np.zeros((dim, max_lag + 1))
         iat = [] 
         eff_sample_size = []
@@ -233,7 +235,26 @@ def autocorr(directory, max_lag=50, autocorr_method='componentwise', do_write_au
             iat.append(iat_cpt)
             eff_sample_size_cpt = len(samples[cpt, :]) / iat_cpt 
             eff_sample_size.append(eff_sample_size_cpt)
+    
+    elif autocorr_method == 'vector':
+        autocorr_samples = np.array([np.mean(np.sum(samples[:, k:] * samples[:, :-k], axis=0)) / np.mean(np.sum(samples**2, axis=0)) for k in range(1, max_lag + 1)])
+        autocorr_samples = np.insert(autocorr_samples, 0, 1, axis=0)
+        iat = 1 + 2 * np.sum(autocorr_samples, axis=0)
+        eff_sample_size = len(samples[0, :]) / iat
+        iat = [iat]
+        eff_sample_size = [eff_sample_size]
 
+    elif autocorr_method == 'angular':
+        norms = np.linalg.norm(samples, axis=0, keepdims=True)
+        unit_vectors = samples / (norms + 1e-6)
+        autocorr_samples = np.array([np.mean(np.sum(unit_vectors[:, k:] * unit_vectors[:, :-k], axis=0)) for k in range(1, max_lag + 1)])
+        autocorr_samples = np.insert(autocorr_samples, 0, 1, axis=0)
+        iat = 1 + 2 * np.sum(autocorr_samples, axis=0)
+        eff_sample_size = len(samples[0, :]) / iat
+        iat = [iat]
+        eff_sample_size = [eff_sample_size]
+
+    autocorr_samples = np.atleast_2d(autocorr_samples)
     # Write autocorrelation samples
     if do_write_autocorr_samples:
         write_npy(directory, **{f"autocorr_samples": autocorr_samples})
@@ -242,9 +263,17 @@ def autocorr(directory, max_lag=50, autocorr_method='componentwise', do_write_au
     if do_plot_autocorr:
         fig, ax = plt.subplots()
         cpt_colors = set_colors(dim)
-        for cpt in range(dim):
-            ax.plot(autocorr_samples[cpt, :], color=cpt_colors[cpt], alpha=0.6, label=f'Autocorr[{cpt}]', linewidth=1)
+        if autocorr_method == 'component':
+            for cpt in range(dim):
+                ax.plot(autocorr_samples[cpt, :], linestyle='-', color=cpt_colors[cpt], alpha=0.5, label=f'{simulator_name}[{cpt}]:\nIAT = {iat[cpt]:.2f}, N_eff = {eff_sample_size[cpt]:.0f}')
+        elif autocorr_method == 'vector' or autocorr_method == 'angular':
+            ax.plot(autocorr_samples[0, :], linestyle='-', color=cpt_colors[0], alpha=0.5, label=f'{simulator_name}:\nIAT = {iat[0]:.2f}, N_eff = {eff_sample_size[0]:.0f}')
         
+        ax.set_xlabel('Lag')
+        ax.set_ylabel('Autocorrelation')
+        fig.suptitle(f'{target_name} {autocorr_method.capitalize()} Autocorrelation Comparison', fontsize=14, y=0.95)
+        ax.legend(frameon=True, facecolor='white', edgecolor='none', fontsize=10)
+
         output_file = os.path.join(directory, f"autocorr_plot.png")
         plt.savefig(output_file, dpi=400)
         print(f"{target_name} {simulator_name} samples autocorrelation plot saved to {output_file}")
@@ -257,7 +286,7 @@ def autocorr(directory, max_lag=50, autocorr_method='componentwise', do_write_au
 
     return autocorr_samples, iat, eff_sample_size, dim
 
-def compare_autocorr(directory, max_lag=50, autocorr_method='componentwise', do_write_autocorr_samples=False):
+def compare_autocorr(directory, max_lag=50, autocorr_method='component', do_write_autocorr_samples=False):
     """
     Plots autocorrelation samples as a function of lag for two provided methods for
     comparison. 
@@ -272,8 +301,6 @@ def compare_autocorr(directory, max_lag=50, autocorr_method='componentwise', do_
         Method for calculating autocorrelation.
     do_write_autocorr_samples: bool
         Write autocorrelation samples to file.
-    do_compare_autocorr: bool
-        Compare autocorrelation samples from different methods.
     """
     output_path = os.path.join(directory, f"output.json")
     reference_output_path = os.path.join(directory, 'reference/output.json')
@@ -292,10 +319,15 @@ def compare_autocorr(directory, max_lag=50, autocorr_method='componentwise', do_
     # Plot
     fig, ax = plt.subplots()
     cpt_colors = set_colors(dim)
-    for cpt in range(dim):
-        ax.plot(autocorr1[cpt, :], linestyle='-', color=cpt_colors[cpt], alpha=0.5, label=f'{simulator_name}[{cpt}]:\nIAT = {iat1[cpt]:.2f}, N_eff = {eff_sample_size1[cpt]:.0f}')
-        ax.plot(autocorr2[cpt, :], linestyle='--', color=cpt_colors[cpt], alpha=0.5, label=f'{reference_simulator_name}[{cpt}]:\nIAT = {iat2[cpt]:.2f}, N_eff = {eff_sample_size2[cpt]:.0f}')
+    if autocorr_method == 'component':
+        for cpt in range(dim):
+            ax.plot(autocorr1[cpt, :], linestyle='-', color=cpt_colors[cpt], alpha=0.5, label=f'{simulator_name}[{cpt}]:\nIAT = {iat1[cpt]:.2f}, N_eff = {eff_sample_size1[cpt]:.0f}')
+            ax.plot(autocorr2[cpt, :], linestyle='--', color=cpt_colors[cpt], alpha=0.5, label=f'{reference_simulator_name}[{cpt}]:\nIAT = {iat2[cpt]:.2f}, N_eff = {eff_sample_size2[cpt]:.0f}')
+    elif autocorr_method == 'vector' or autocorr_method == 'angular':
+        ax.plot(autocorr1[0, :], linestyle='-', color=cpt_colors[0], alpha=0.5, label=f'{simulator_name}:\nIAT = {iat1[0]:.2f}, N_eff = {eff_sample_size1[0]:.0f}')
+        ax.plot(autocorr2[0, :], linestyle='--', color=cpt_colors[0], alpha=0.5, label=f'{reference_simulator_name}:\nIAT = {iat2[0]:.2f}, N_eff = {eff_sample_size2[0]:.0f}')
     
+
     ax.set_xlabel('Lag')
     ax.set_ylabel('Autocorrelation')
     fig.suptitle(f'{target_name} {autocorr_method.capitalize()} Autocorrelation Comparison', fontsize=14, y=0.95)

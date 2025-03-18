@@ -12,7 +12,7 @@ class MetropolisSimulator(Simulator):
         
         Parameters:
         ---
-        trarget : Target
+        target : Target
             Target distribution to simulate.
         num_samples : int
             Number of samples to simulate.

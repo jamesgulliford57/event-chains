@@ -2,6 +2,11 @@ def parse_value(value):
     """
     Attempt to convert string value to corresponding Python literal.
     If the conversion fails the original string is returned.
+
+    Parameters
+    ---
+    value : str
+        The value to attempt conversion.
     """
     import ast
     try:
@@ -12,6 +17,11 @@ def parse_value(value):
 def parse_possible_list(value):
     """
     Parse input that is either a list or a single int or float.
+
+    Parameters
+    ---
+    value : str
+        The value to attempt conversion.
     """
     import ast
     if not isinstance(value, str):
@@ -48,12 +58,22 @@ def parse_possible_list(value):
 def to_camel_case(s):
     """
     Convert a snake_case string to CamelCase.
+
+    Parameters
+    ---
+    s : str
+        The string to convert.
     """
     return ''.join(word.capitalize() for word in s.split('_'))
 
 def to_snake_case(s):
     """
     Convert a CamelCase string to snake_case.
+
+    Parameters
+    ---
+    s : str
+        The string to convert.
     """
     import re
     # Insert an underscore between a lowercase letter or digit and an uppercase letter followed by lowercase letters.
@@ -61,42 +81,6 @@ def to_snake_case(s):
     # Insert an underscore between a lowercase letter/digit and an uppercase letter.
     snake = re.sub(r'([a-z0-9])([A-Z])', r'\1_\2', s1)
     return snake.lower()
-
-def create_directory(output_dir, model_name, scheme, final_time, n, init_value, num_paths, do_timestamp=False):
-    """
-    Create output directory for simulation results.
-
-    Parameters
-    ---
-    output_dir : str
-        Path to highest leveldirectory where output will be saved.
-    model_name : str
-        Name of the model being simualted.
-    scheme : str
-        Numerical scheme used to simulate model.
-    final_time : float
-        Time horizon of simulation.
-    n : int
-        Discretisation parameter, number of intervals T is divided into.
-    init_value : float
-        Initial condition for random solution trajectories.
-    num_paths : int
-        Number of trajectories to be simulated.
-    do_timestamp : bool
-        Flag to include timestamp in output directory name.
-    """
-
-    import datetime
-    import os 
-
-    if do_timestamp:
-        timestamp = datetime.now().strftime("%y%m%d_%H%M%S")
-        output_directory = os.path.join(output_dir, model_name, scheme.lower(), f'final_time={final_time}_n={n}_init={init_value}_num_paths={num_paths}', timestamp)
-    else:
-        output_directory = os.path.join(output_dir, model_name, scheme.lower(), f'final_time={final_time}_n={n}_init={init_value}_num_paths={num_paths}')
-    os.makedirs(output_directory, exist_ok=True)
-
-    return output_directory
 
 def load_class(model_name):
     """

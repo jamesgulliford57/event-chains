@@ -11,6 +11,8 @@ class EventChainSimulator(Simulator):
         
         Parameters:
         ---
+        target : Target
+            Target distribution to simulate.
         num_samples : int
             Number of samples to simulate.
         x0 : float, list
