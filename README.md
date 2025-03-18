@@ -8,7 +8,7 @@ Clone the repository and install dependencies:
 ```bash
 git clone https://github.com/jamesgulliford57/zigzag.git
 cd zigzag
-pip install -r requirements.txt (requirements tbc)
+pip install -r requirements.txt
 ```
 
 ## Configuration 
