@@ -1,5 +1,6 @@
 from simulators.simulator import Simulator
 import numpy as np 
+from utils.build_utils import list_files_excluding
 from noise_dists.gaussian_noise_dist import GaussianNoiseDistribution
 
 class MetropolisSimulator(Simulator):
@@ -23,6 +24,8 @@ class MetropolisSimulator(Simulator):
         """
         super().__init__(target=target, num_samples=num_samples, x0=x0, simulator_specific_params=simulator_specific_params)
         
+        if globals().get(self.noise_distribution) is None:
+            raise ValueError(f"Noise distribution {self.noise_distribution} not found. Available: {list_files_excluding('noise_dists', 'noise_dist')}")
         self.noise_distribution = globals().get(self.noise_distribution)(sigma_noise=self.sigma_noise)
         self.noise_distribution_name = self.noise_distribution.__class__.__name__
 

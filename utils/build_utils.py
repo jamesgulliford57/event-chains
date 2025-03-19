@@ -83,6 +83,9 @@ def to_snake_case(s):
     return snake.lower()
 
 def load_class(model_name):
+
+
+
     """
     Dynamically load class based on provided model name.
     
@@ -97,3 +100,20 @@ def load_class(model_name):
     class_name = to_camel_case(model_name) 
     module = importlib.import_module(f"models.{module_name}")
     return getattr(module, class_name)
+
+def list_files_excluding(directory, exclude_files):
+    """
+    List files in a directory excluding those in the exclude_files list.
+
+    Parameters
+    ---
+    directory : str
+        The directory to list files from.
+    exclude_files : list
+        List of files to exclude from the listing.
+    """
+    import os
+    if not isinstance(exclude_files, list):
+        exclude_files = [exclude_files]
+    exclude_files.append('__pycache__')
+    return [f for f in os.listdir(directory) if f not in exclude_files]

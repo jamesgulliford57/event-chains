@@ -62,6 +62,6 @@ do_mean_squared_displacement = True
 ```
 ## Run
 ```bash
-python main.py --config config_files/config_filename.ini
+python run.py --config config_files/config_filename.ini
 ```
 

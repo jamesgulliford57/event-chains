@@ -185,7 +185,7 @@ def compare_cdf(directory):
 
     plt.close()
 
-def autocorr(directory, max_lag=50, autocorr_method='component', do_write_autocorr_samples=False, do_plot_autocorr=False):
+def autocorr(directory, max_lag=50, autocorr_method='component', autocorr_samples='position', do_write_autocorr_samples=False, do_plot_autocorr=False):
     """
     Returns the autocorrelation of simulation samples as a function of lag up to
     the provided max_lag. Also returns the integrated autocorrelation function (IAT)
@@ -208,7 +208,7 @@ def autocorr(directory, max_lag=50, autocorr_method='component', do_write_autoco
     """
     max_lag = int(max_lag)
     # Identify file paths
-    samples_path = os.path.join(directory, f"position_samples.npy")
+    samples_path = os.path.join(directory, f"{autocorr_samples}_samples.npy")
     output_path = os.path.join(directory, f"output.json")
     # Load files
     samples = np.load(samples_path)
@@ -286,7 +286,7 @@ def autocorr(directory, max_lag=50, autocorr_method='component', do_write_autoco
 
     return autocorr_samples, iat, eff_sample_size, dim
 
-def compare_autocorr(directory, max_lag=50, autocorr_method='component', do_write_autocorr_samples=False):
+def compare_autocorr(directory, max_lag=50, autocorr_method='component', autocorr_samples='position', do_write_autocorr_samples=False):
     """
     Plots autocorrelation samples as a function of lag for two provided methods for
     comparison. 
@@ -314,8 +314,8 @@ def compare_autocorr(directory, max_lag=50, autocorr_method='component', do_writ
     print(f"\nComparing correlation functions for {target_name} {simulator_name} and {reference_simulator_name} simulations...")
 
     reference_directory = os.path.join(directory, 'reference')
-    autocorr1, iat1, eff_sample_size1, dim = autocorr(directory, max_lag, autocorr_method, do_write_autocorr_samples)
-    autocorr2, iat2, eff_sample_size2, _ = autocorr(reference_directory, max_lag, autocorr_method, do_write_autocorr_samples) 
+    autocorr1, iat1, eff_sample_size1, dim = autocorr(directory=directory, max_lag=max_lag, autocorr_method=autocorr_method, autocorr_samples=autocorr_samples, do_write_autocorr_samples=do_write_autocorr_samples)
+    autocorr2, iat2, eff_sample_size2, _ = autocorr(directory=reference_directory, max_lag=max_lag, autocorr_method=autocorr_method, autocorr_samples=autocorr_samples, do_write_autocorr_samples=do_write_autocorr_samples) 
     # Plot
     fig, ax = plt.subplots()
     cpt_colors = set_colors(dim)
@@ -326,7 +326,6 @@ def compare_autocorr(directory, max_lag=50, autocorr_method='component', do_writ
     elif autocorr_method == 'vector' or autocorr_method == 'angular':
         ax.plot(autocorr1[0, :], linestyle='-', color=cpt_colors[0], alpha=0.5, label=f'{simulator_name}:\nIAT = {iat1[0]:.2f}, N_eff = {eff_sample_size1[0]:.0f}')
         ax.plot(autocorr2[0, :], linestyle='--', color=cpt_colors[0], alpha=0.5, label=f'{reference_simulator_name}:\nIAT = {iat2[0]:.2f}, N_eff = {eff_sample_size2[0]:.0f}')
-    
 
     ax.set_xlabel('Lag')
     ax.set_ylabel('Autocorrelation')

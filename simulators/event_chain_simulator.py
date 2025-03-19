@@ -22,9 +22,21 @@ class EventChainSimulator(Simulator):
         """ 
         super().__init__(target=target, num_samples=num_samples, x0=x0, simulator_specific_params=simulator_specific_params)
 
+        if not hasattr(self, 'v0'):
+            print("No initial velocity provided. Setting to 1.0.")
+            self.v0 = 1.0
+        if not hasattr(self, 'poisson_thinned'):
+            print("No Poisson thinning specified. Setting to False.")
+            self.poisson_thinned = False
+        if not hasattr(self, 'final_time'):
+            raise ValueError("Final time not specified. Please provide 'final_time' in simulator_specific_params.")
+        
         if isinstance(self.v0, (float, int)):
             self.v0 = [self.v0]
         self.v = np.array(self.v0) 
+
+        if len(self.x0) != len(self.v0):
+            raise ValueError("State and velocity must be the same dimension.")
 
     def find_next_event_time(self):
         """

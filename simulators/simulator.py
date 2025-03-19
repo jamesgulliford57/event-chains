@@ -28,7 +28,9 @@ class Simulator(ABC):
         self.target_params = self.target.target_params
         self.num_samples = num_samples
 
-        if type(x0) == float or type(x0) == int:
+        if not isinstance(x0[0], (float, int)):
+            raise ValueError(f"Initial state elements must be a float or int. Provided: {x0}")
+        elif isinstance(x0, (float, int)):
             x0 = [x0]
 
         self.x0 = x0
@@ -37,7 +39,7 @@ class Simulator(ABC):
             setattr(self, key, value)
 
     @timer
-    def sim(self, output_dir):
+    def sim(self, directory):
         """
         Performs simulation and writes simulation output files.
         
@@ -49,20 +51,22 @@ class Simulator(ABC):
         print_section(f'Running {self.__class__.__name__} simulation with ' 
             f'{self.target.__class__.__name__} target with {self.num_samples} '
             f' and x0 ={self.x0}...')
-        
+        # Clear output json
+        open(f'{directory}/output.json', 'w').close()
+        # Generate samples using selected simulator
         samples = self.sim_chain()
 
         # Write the samples to a numpy file
-        write_npy(output_dir, **samples)
+        write_npy(directory, **samples)
         # Write output parameters json
         params = {key : value for key, value in self.__dict__.items() if isinstance(value, (int, float, list, str, dict))}
-        write_json(output_dir, **{f"output" : params})
+        write_json(directory, **{f"output" : params})
 
     @abstractmethod
     def sim_chain(self):
         """
         Abstract method for chain simulation methods.
         """
-        raise NotImplementedError
+        raise NotImplementedError('Simulator class requires sim_chain method to be implemented.')
 
 

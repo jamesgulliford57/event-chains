@@ -21,6 +21,11 @@ class GaussTarget(Target):
                          event_rate=self.event_rate, 
                          event_rate_bound=self.event_rate_bound, 
                          dim=dim, target_params=target_params)
+        
+        if not hasattr(self, 'mu_target'):
+            raise ValueError("No target mean provided. Please provide 'mu_target' in target_params.")
+        if not hasattr(self, 'sigma_target'):
+            raise ValueError("No target standard deviation provided. Please provide 'sigma_target' in target_params.")
     
     def pdf(self, x):
         """
