@@ -1,6 +1,7 @@
 # Python compiled files
 __pycache__/
 *.pyc
+test.py
 
 # Fortran module files
 *.mod

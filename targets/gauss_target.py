@@ -26,6 +26,8 @@ class GaussTarget(Target):
             raise ValueError("No target mean provided. Please provide 'mu_target' in target_params.")
         if not hasattr(self, 'sigma_target'):
             raise ValueError("No target standard deviation provided. Please provide 'sigma_target' in target_params.")
+        if not isinstance(self.sigma_target, (int, float)) or self.sigma_target <= 0:
+            raise ValueError(f"Target standard deviation 'sigma_target' must be positive integer or float. Provided: {self.sigma_target}")
     
     def pdf(self, x):
         """
@@ -37,6 +39,17 @@ class GaussTarget(Target):
             Input to the pdf.
         """
         return mvnorm.pdf(x, mean=self.mu_target*np.ones(self.dim), cov=self.sigma_target**2*np.eye(self.dim))
+    
+    def cdf(self, x):
+        """
+        Cumulative density function of the target distribution.
+
+        Parameters
+        ---
+        x : float, list
+            Input to the cdf.
+        """
+        return mvnorm.cdf(x, mean=self.mu_target*np.ones(self.dim), cov=self.sigma_target**2*np.eye(self.dim))
     
     def event_time_func(self, x, v):
         """

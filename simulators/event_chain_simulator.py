@@ -23,22 +23,28 @@ class EventChainSimulator(Simulator):
         super().__init__(target=target, num_samples=num_samples, x0=x0, simulator_specific_params=simulator_specific_params)
 
         if not hasattr(self, 'v0'):
-            print("No initial velocity provided. Setting to 1.0.")
-            self.v0 = 1.0
+            raise ValueError("No initial velocity provided. Please provide 'v0' in simulator_specific_params.")
+        if isinstance(self.v0, (float, int)):
+            self.v0 = [self.v0]
+        if not all(isinstance(v0_cpt, (float, int)) for v0_cpt in self.v0):
+            raise ValueError(f"Initial velocity elements must be a float or int. Provided: {self.v0}")
+        if len(self.x0) != len(self.v0):
+            raise ValueError(f"State and velocity must be the same dimension. Provided: {self.x0}, {self.v0}")
+    
+        if not hasattr(self, 'final_time'):
+            raise ValueError("Final time not specified. Please provide 'final_time' in simulator_specific_params.")
+        if not isinstance(self.final_time, (int, float)) or self.final_time <= 0:
+            raise ValueError(f"Final time must be a positive integer or float. Provided: {self.final_time}")
+
         if not hasattr(self, 'poisson_thinned'):
             print("No Poisson thinning specified. Setting to False.")
             self.poisson_thinned = False
-        if not hasattr(self, 'final_time'):
-            raise ValueError("Final time not specified. Please provide 'final_time' in simulator_specific_params.")
         
-        if isinstance(self.v0, (float, int)):
-            self.v0 = [self.v0]
+        
         self.v = np.array(self.v0) 
 
-        if len(self.x0) != len(self.v0):
-            raise ValueError("State and velocity must be the same dimension.")
 
-    def find_next_event_time(self):
+    def _find_next_event_time(self):
         """
         Returns the time until the next event and the component of the state to flip.
         """
@@ -64,10 +70,9 @@ class EventChainSimulator(Simulator):
         """
         return self.target.event_rate(self.x, self.v)[component_to_flip] / self.target.event_rate_bound(self.x, self.v)[component_to_flip]
 
-    def sim_chain(self):
+    def _sim_chain(self):
         """
         Performs ecmc simulation.
-        
         """
         # Reset state and time variables
         self.x = np.array(self.x0)
@@ -80,7 +85,7 @@ class EventChainSimulator(Simulator):
         if self.poisson_thinned:
             proposed_events = 0
             while time < self.final_time:
-                event_time, component_to_flip = self.find_next_event_time()
+                event_time, component_to_flip = self._find_next_event_time()
                 self.x = self.x + self.v * event_time
                 time += event_time
                 proposed_events += 1
@@ -95,12 +100,11 @@ class EventChainSimulator(Simulator):
         else:
             # Simulate chain
             while time < self.final_time:
-                event_time, component_to_flip = self.find_next_event_time()
+                event_time, component_to_flip = self._find_next_event_time()
                 self.x = self.x + self.v * event_time
                 time += event_time
                 event_states.append(self.x.copy())
                 event_times.append(time)
-
                 self.v[component_to_flip] = -self.v[component_to_flip]
                 events += 1  
                 if events % 10000 == 0 and events > 0:

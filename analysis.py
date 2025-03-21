@@ -2,7 +2,9 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 import json
-from utils.data_utils import write_npy, read_json, set_colors
+from targets.gauss_target import GaussTarget
+from utils.data_utils import write_npy, read_json, set_colors, update_json
+from scipy.stats import cramervonmises
 
 plt.style.use('ggplot')
 plt.rcParams['agg.path.chunksize'] = 10000
@@ -436,3 +438,51 @@ def compare_norm_cdf(directory):
 
     plt.close()
 
+def cramer_von_mises(directory):
+    """
+    Perform Cramer-von Mises test to compare samples to reference distribution.
+    
+    Parameters
+    ---
+    directory: str
+        Path to directory containing simulation files.
+    reference_distribution: str
+        Name of reference distribution.
+    """
+    # Identify file paths
+    samples_path = os.path.join(directory, f"position_samples.npy")
+    output_path = os.path.join(directory, 'output.json')
+    # Load files
+    samples = np.load(samples_path)
+    samples = np.atleast_2d(samples)
+    output = read_json(output_path)
+
+    target_name = output['target_name']
+    simulator_name = output['simulator_name']
+
+    print(f"\nPerforming Cramer-von Mises test for {target_name} {simulator_name}...")
+    
+    dim = np.shape(samples)[0]
+    num_samples = np.shape(samples)[1]  
+    target_params = output['target_params']
+    
+    target_params['dim'] = 1
+    cdf = globals().get(target_name)(dim=1, target_params=target_params).cdf
+
+    cvm_statistics = []
+    # Calculate norm
+    for cpt in range(dim):
+        cvm_statistic = num_samples*cramervonmises(samples[cpt, :], cdf).statistic
+        cvm_statistics.append(cvm_statistic)
+
+    # Perform CVM test
+    print(f"Cramer-von Mises statistic: {cvm_statistics}")
+
+    # Write CVM statistic to output
+    output['cvm_statistic'] = cvm_statistics
+    with open(output_path, 'w') as f:
+         json.dump(output, f, indent=4)
+
+    update_json(os.path.join(directory, 'cvm_statistics.json'), **{f"{output['num_samples']}" : cvm_statistics})
+
+    return cvm_statistics

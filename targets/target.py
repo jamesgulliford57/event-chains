@@ -35,9 +35,16 @@ class Target(ABC):
             Outputs probability density at provided input.
             """
             raise NotImplementedError 
+        
+        @abstractmethod 
+        def cdf(self, *args):
+            """
+            Outputs cumulative probability at provided input.
+            """
+            raise NotImplementedError
 
         @abstractmethod
-        def event_time_func(self):
+        def event_time_func(self, *args):
             raise NotImplementedError
 
 

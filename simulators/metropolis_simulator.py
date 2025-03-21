@@ -1,8 +1,8 @@
 from simulators.simulator import Simulator
 import numpy as np 
 from utils.build_utils import list_files_excluding
-from noise_dists.gaussian_noise_dist import GaussianNoiseDistribution
-
+from noise_distributions.gaussian_noise_distribution import GaussianNoiseDistribution
+import sys
 class MetropolisSimulator(Simulator):
     """
     Base class for Metropolis simulators.
@@ -25,7 +25,13 @@ class MetropolisSimulator(Simulator):
         super().__init__(target=target, num_samples=num_samples, x0=x0, simulator_specific_params=simulator_specific_params)
         
         if globals().get(self.noise_distribution) is None:
-            raise ValueError(f"Noise distribution {self.noise_distribution} not found. Available: {list_files_excluding('noise_dists', 'noise_dist')}")
+            raise ValueError(f"Noise distribution {self.noise_distribution} not found. Available: {list_files_excluding('noise_distributions', 'noise_distribution.py')}")
+        if not hasattr(self, 'sigma_noise'):
+            raise ValueError("No noise standard deviation provided. Please provide 'sigma_noise' in simulator_specific_params."
+                             f" For a d-dimensional isotropic Gaussian target, optimal sigma_noise is 2.38 / sqrt(d).")
+        if not isinstance(self.sigma_noise, (int, float)) or self.sigma_noise <= 0:
+            raise ValueError(f"Noise standard deviation 'sigma_noise' must be positive integer or float. Provided: {self.sigma_noise}."
+                             f" For a d-dimensional isotropic Gaussian target, optimal sigma_noise is 2.38 / sqrt(d).")
         self.noise_distribution = globals().get(self.noise_distribution)(sigma_noise=self.sigma_noise)
         self.noise_distribution_name = self.noise_distribution.__class__.__name__
 
@@ -42,7 +48,7 @@ class MetropolisSimulator(Simulator):
         """
         return min(1, self.target.pdf(y) / self.target.pdf(x) * self.noise_distribution.transition_prob(y, x) / self.noise_distribution.transition_prob(x, y))
 
-    def sim_chain(self):
+    def _sim_chain(self):
         """
         Perform Metropolis simulation.
         """

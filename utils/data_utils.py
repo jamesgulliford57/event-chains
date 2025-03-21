@@ -93,8 +93,6 @@ def update_json(json_path, **items):
         with open(json_path, 'w', encoding='utf-8') as f:
             json.dump(items, f, indent=4)
 
-    return data
-
 def set_colors(dim):
     """
     Create a list of colors for plotting based on the number of dimensions.

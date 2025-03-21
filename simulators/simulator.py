@@ -28,10 +28,13 @@ class Simulator(ABC):
         self.target_params = self.target.target_params
         self.num_samples = num_samples
 
-        if not isinstance(x0[0], (float, int)):
-            raise ValueError(f"Initial state elements must be a float or int. Provided: {x0}")
-        elif isinstance(x0, (float, int)):
+        if isinstance(x0, (float, int)):
             x0 = [x0]
+        if not all(isinstance(x0_cpt, (float, int)) for x0_cpt in x0):
+            raise ValueError(f"Initial state elements must be a float or int. Provided: {x0}")
+
+        if not isinstance(num_samples, int) or num_samples <= 0:
+            raise ValueError(f"Number of samples must be a positive integer. Provided: {num_samples}")
 
         self.x0 = x0
         self.x = np.array(x0)
@@ -54,7 +57,7 @@ class Simulator(ABC):
         # Clear output json
         open(f'{directory}/output.json', 'w').close()
         # Generate samples using selected simulator
-        samples = self.sim_chain()
+        samples = self._sim_chain()
 
         # Write the samples to a numpy file
         write_npy(directory, **samples)
@@ -63,10 +66,10 @@ class Simulator(ABC):
         write_json(directory, **{f"output" : params})
 
     @abstractmethod
-    def sim_chain(self):
+    def _sim_chain(self):
         """
         Abstract method for chain simulation methods.
         """
-        raise NotImplementedError('Simulator class requires sim_chain method to be implemented.')
+        raise NotImplementedError
 
 

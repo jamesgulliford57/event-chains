@@ -57,6 +57,7 @@ def main(config_file):
 
     do_compare_cdf = config.getboolean("Analysis", "do_compare_cdf")
     do_norm_compare_cdf = config.getboolean("Analysis", "do_norm_compare_cdf")
+    do_cramer_von_mises = config.getboolean("Analysis", "do_cramer_von_mises")
 
     do_autocorr = config.getboolean("Analysis", "do_autocorr")
     max_lag = config.getint("Analysis", "max_lag")
@@ -70,9 +71,9 @@ def main(config_file):
     # Create output directory
     if do_timestamp:
         timestamp = datetime.now().strftime("%d%m%y_%H%M%S")
-        directory = os.path.join('data', target_name, simulator_name, f'num_samples={num_samples}_x0={x0}', timestamp)
+        directory = os.path.join('data', target_name, f'{"".join(f"{key}={value}_" for key, value in target_params.items())}', simulator_name, f'num_samples={num_samples}_x0={x0}', timestamp)
     else:
-        directory = os.path.join('data', target_name, simulator_name, f'num_samples={num_samples}_x0={x0}')
+        directory = os.path.join('data', target_name, f'{"".join(f"{key}={value}_" for key, value in target_params.items())}', simulator_name, f'num_samples={num_samples}_x0={x0}')
     os.makedirs(directory, exist_ok=True)
     if do_reference_simulation:
             reference_directory = os.path.join(directory, 'reference')
@@ -126,6 +127,10 @@ def main(config_file):
         anl.mean_squared_displacement(directory=directory)
         if do_reference_simulation:
             anl.mean_squared_displacement(directory=reference_directory)
+    if do_cramer_von_mises:
+        anl.cramer_von_mises(directory=directory)
+        #if do_reference_simulation:
+        #    anl.cramer_von_mises(directory=reference_directory)
 
     # Joint analysis
     if do_compare_cdf:
