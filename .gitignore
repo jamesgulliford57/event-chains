@@ -3,6 +3,9 @@ __pycache__/
 *.pyc
 test.py
 
+# macOS system files
+.DS_Store
+
 # Fortran module files
 *.mod
 *.smod

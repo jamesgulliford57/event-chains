@@ -2,12 +2,12 @@ from simulators.simulator import Simulator
 import numpy as np 
 from utils.build_utils import list_files_excluding
 from noise_distributions.gaussian_noise_distribution import GaussianNoiseDistribution
-import sys
+
 class MetropolisSimulator(Simulator):
     """
     Base class for Metropolis simulators.
     """
-    def __init__(self, target, num_samples, x0, **simulator_specific_params):
+    def __init__(self, target, num_samples, x0, samplers, **simulator_specific_params):
         """
         Constructor for the Metropolis simulator.
         
@@ -22,7 +22,7 @@ class MetropolisSimulator(Simulator):
         simulator_specific_params : dict
             Parameters specific to the Metropolis simulator.
         """
-        super().__init__(target=target, num_samples=num_samples, x0=x0, simulator_specific_params=simulator_specific_params)
+        super().__init__(target=target, num_samples=num_samples, x0=x0, samplers=samplers, simulator_specific_params=simulator_specific_params)
         
         if globals().get(self.noise_distribution) is None:
             raise ValueError(f"Noise distribution {self.noise_distribution} not found. Available: {list_files_excluding('noise_distributions', 'noise_distribution.py')}")
@@ -35,41 +35,41 @@ class MetropolisSimulator(Simulator):
         self.noise_distribution = globals().get(self.noise_distribution)(sigma_noise=self.sigma_noise)
         self.noise_distribution_name = self.noise_distribution.__class__.__name__
 
-    def _acc_prob(self, x, y):
+    def _acc_prob(self, current_state, proposed_state):
         """
         Metropolis acceptance probability.
         
         Parameters:
         ---
-        x : float, list
+        current_state : float, list
             Current state.
-        y : float, list
+        proposed_state : float, list
             Proposed state.
         """
-        return min(1, self.target.pdf(y) / self.target.pdf(x) * self.noise_distribution.transition_prob(y, x) / self.noise_distribution.transition_prob(x, y))
+        return min(1, self.target.pdf(proposed_state) / self.target.pdf(current_state) * self.noise_distribution.transition_prob(proposed_state, current_state) / self.noise_distribution.transition_prob(current_state, proposed_state))
 
     def _sim_chain(self):
         """
         Perform Metropolis simulation.
         """
-
         accepted = 0
-        position_samples = [self.x]
-        for i in range(1, self.num_samples):
-            if i % 10000 == 0:
-                print(f'Step {i} occured.')
+        for chain_index in range(1, self.num_samples):
+            if chain_index % 10000 == 0:
+                print(f'Step {chain_index} occured.')
             proposed_state = self.noise_distribution.propose_new_state(self.x)
             if np.random.uniform() < self._acc_prob(self.x, proposed_state):
                 self.x = proposed_state 
                 accepted += 1
-            position_samples.append(self.x.copy())
+            # Generate samples
+            for sampler in self.samplers.values():
+                sampler.generate_sample(current_state=self.x.copy())
+        
+        # Convert to arrays
+        for sampler in self.samplers.values():
+                sampler.samples_to_array()
+
         # Record acceptance rate
         self.acceptance_rate = accepted / self.num_samples
 
         print(f"Metropolis simulation complete. {self.num_samples} samples generated")
-        
-        position_samples = np.array(position_samples).T 
-        samples = {'position_samples' : position_samples}
-
-        return samples
 

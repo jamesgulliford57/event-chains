@@ -1,4 +1,4 @@
-# Zigzag 
+# Event-chains
 
 ## Overview
 Simulation of event chain MCMC processes. This project is Work in Progress.

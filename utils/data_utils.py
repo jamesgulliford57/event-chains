@@ -1,3 +1,5 @@
+import json
+
 def write_npy(output_directory, **data_arrays):
         """
         Write simulation data to npy files to provided output directory.
@@ -37,7 +39,7 @@ def write_json(output_directory, **data_arrays):
         for array_name, array_data in data_arrays.items():
             file_path = join(output_directory, f"{array_name}.json")
             with open(file_path, "w") as f:
-                  json.dump(array_data, f, indent=4)
+                  json.dump(array_data, f, indent=4, cls=CustomEncoder)
 
         print(f"\nData saved in {output_directory}")  
 
@@ -94,6 +96,7 @@ def update_json(json_path, **items):
             json.dump(items, f, indent=4)
 
 def set_colors(dim):
+
     """
     Create a list of colors for plotting based on the number of dimensions.
 
@@ -112,3 +115,15 @@ def set_colors(dim):
     else:
         cpt_colors = [custom_cmap(i / (dim - 1)) for i in range(dim)]
     return cpt_colors
+class CustomEncoder(json.JSONEncoder):
+    def default(self, obj):
+        # Convert class objects to their name
+        if isinstance(obj, type):
+            return obj.__name__
+        # Convert sampler instances to their class name
+        if obj.__class__.__name__ in ["PositionSampler", "SquaredDisplacementSampler"]:
+            return obj.__class__.__name__
+        # Optionally, for other objects with __dict__, return a filtered dict
+        if hasattr(obj, '__dict__'):
+            return {k: v for k, v in obj.__dict__.items() if isinstance(v, (int, float, list, str, dict))}
+        return json.JSONEncoder.default(self, obj)

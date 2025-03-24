@@ -4,6 +4,7 @@ from datetime import datetime
 from utils.sim_utils import print_section
 from utils.build_utils import parse_value, parse_possible_list, list_files_excluding
 from targets.gauss_target import GaussTarget
+from targets.boltzmann_target import BoltzmannTarget
 from simulators.event_chain_simulator import EventChainSimulator
 from simulators.metropolis_simulator import MetropolisSimulator
 import analysis as anl
@@ -43,6 +44,8 @@ def main(config_file):
     simulator_specific_params = {key: parse_value(value) for key, value in config.items("SimulatorSpecificParams")}
     # Target
     target_params = {'dim' : dim} | {key: parse_value(value) for key, value in config.items("TargetParams")}
+    # Sampler
+    samplers = parse_possible_list(config.get("Sampler", "samplers"))
     # Reference
     do_reference_simulation = config.getboolean("ReferenceSimulator", "do_reference_simulation")
     reference_simulator_name = config.get("ReferenceSimulator", "reference_simulator")
@@ -51,9 +54,6 @@ def main(config_file):
     # Analysis
     do_timestamp = config.getboolean("Analysis", "do_timestamp")
     do_plot_samples = config.getboolean("Analysis", "do_plot_samples")
-    do_plot_zigzag = config.getboolean("Analysis", "do_plot_zigzag")
-    if do_plot_zigzag:
-        normalise_zigzag = config.getboolean("Analysis", "normalise_zigzag")
 
     do_compare_cdf = config.getboolean("Analysis", "do_compare_cdf")
     do_norm_compare_cdf = config.getboolean("Analysis", "do_norm_compare_cdf")
@@ -92,16 +92,16 @@ def main(config_file):
         simulator_class = globals().get(simulator_name)
         if simulator_class is None:
             raise ValueError(f'Simulator class {simulator_name} not found. Available: {list_files_excluding("simulators", "simulator.py")}')
-        simulator = simulator_class(target=target, num_samples=num_samples, x0=x0, simulator_specific_params=simulator_specific_params)
-        print(f'\n{simulator_name} simulator with parameters {simulator_specific_params} initalised.')
+        simulator = simulator_class(target=target, num_samples=num_samples, x0=x0, samplers=samplers, simulator_specific_params=simulator_specific_params)
+        print(f'\n{simulator_name} simulator with parameters {simulator_specific_params} initialised.')
         
         # Build reference simulator
         if do_reference_simulation:
             reference_simulator_class = globals().get(reference_simulator_name)
             if reference_simulator_class is None:
                 raise ValueError(f'Reference simulator class {reference_simulator_name} not found. Available: {list_files_excluding("simulators", "simulator.py")}')
-            reference_simulator = reference_simulator_class(target=target, num_samples=num_samples, x0=x0, simulator_specific_params=reference_simulator_specific_params)
-            print(f'\n{reference_simulator_name} reference simulator with parameters {reference_simulator_specific_params} initalised.')
+            reference_simulator = reference_simulator_class(target=target, num_samples=num_samples, x0=x0, samplers=samplers, simulator_specific_params=reference_simulator_specific_params)
+            print(f'\n{reference_simulator_name} reference simulator with parameters {reference_simulator_specific_params} initialised.')
 
         # Simulation
         simulator.sim(directory=directory)
@@ -114,11 +114,6 @@ def main(config_file):
         anl.plot_samples(directory=directory)
         if do_reference_simulation:
             anl.plot_samples(directory=reference_directory)
-    if do_plot_zigzag:
-        if dim == 2:
-            anl.plot_zigzag(directory=directory, normalised=normalise_zigzag)
-        else:
-            print("Zigzag plot only available for 2D targets. Skipping...")
     if do_autocorr:
         anl.autocorr(directory=directory, max_lag=max_lag, autocorr_method=autocorr_method, autocorr_samples=autocorr_samples, do_write_autocorr_samples=do_write_autocorr_samples, do_plot_autocorr=do_plot_autocorr)
         if do_reference_simulation:

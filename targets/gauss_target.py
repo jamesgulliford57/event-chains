@@ -15,7 +15,7 @@ class GaussTarget(Target):
         dim : int
             Dimension of the target distribution.
         target_params : dict
-            Parameters specific to the target distribution.
+            Parameters specific to the Gaussian distribution.
         """
         super().__init__(event_time_func=self.event_time_func,  
                          event_rate=self.event_rate, 
@@ -31,7 +31,7 @@ class GaussTarget(Target):
     
     def pdf(self, x):
         """
-        Probability density function of the target distribution.
+        Probability density function of the Gaussian distribution.
         
         Parameters
         ---

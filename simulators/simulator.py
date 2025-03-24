@@ -1,13 +1,16 @@
 import numpy as np 
-from abc import ABC, abstractmethod
+from abc import ABCMeta, abstractmethod
 from utils.sim_utils import timer, print_section
 from utils.data_utils import write_json, write_npy
+from utils.build_utils import list_files_excluding
+from samplers.position_sampler import PositionSampler
+from samplers.squared_displacement_sampler import SquaredDisplacementSampler
 
-class Simulator(ABC):
+class Simulator(metaclass=ABCMeta):
     """
     Base class for simulators.
     """
-    def __init__(self, target, num_samples, x0=0.0, **simulator_specific_params):
+    def __init__(self, target, num_samples, x0=0.0, samplers=[], **simulator_specific_params):
         """
         Initialise the simulator.
         
@@ -41,6 +44,12 @@ class Simulator(ABC):
         for key, value in simulator_specific_params['simulator_specific_params']['simulator_specific_params'].items():
             setattr(self, key, value)
 
+        if len(samplers) == 0:
+            raise ValueError(f"No samplers specified. No samples will be taken during {self.__class__.__name__} simulation. Available: {list_files_excluding('samplers', 'sampler.py')}")
+        setattr(self, 'samplers', {sampler : globals().get(sampler)(num_samples=self.num_samples, dim=self.target.dim, x0=self.x0) for sampler in samplers})
+
+        print(self.__dict__)
+
     @timer
     def sim(self, directory):
         """
@@ -52,14 +61,17 @@ class Simulator(ABC):
             Directory to save output files.
         """
         print_section(f'Running {self.__class__.__name__} simulation with ' 
-            f'{self.target.__class__.__name__} target with {self.num_samples} '
+            f'{self.target.__class__.__name__} target with {self.num_samples} samples'
             f' and x0 ={self.x0}...')
         # Clear output json
         open(f'{directory}/output.json', 'w').close()
+        # Initalise sample arrays
+        for sampler in self.samplers.values():
+            sampler.initialise_samples()
         # Generate samples using selected simulator
-        samples = self._sim_chain()
-
+        self._sim_chain()
         # Write the samples to a numpy file
+        samples = {sampler.array_name : sampler.samples for sampler in self.samplers.values()}
         write_npy(directory, **samples)
         # Write output parameters json
         params = {key : value for key, value in self.__dict__.items() if isinstance(value, (int, float, list, str, dict))}

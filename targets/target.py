@@ -1,6 +1,7 @@
-from abc import ABC, abstractmethod
+from abc import ABCMeta, abstractmethod
+from potentials.harmonic_potential import HarmonicPotential
 
-class Target(ABC):
+class Target(metaclass=ABCMeta):
     """
     Target (stationary) distribution for simulation.
     """
@@ -28,6 +29,8 @@ class Target(ABC):
         self.target_params = target_params
         for key, value in target_params.items(): 
             setattr(self, key, value) 
+        if hasattr(self, 'potential'):
+            self.potential = globals().get(self.potential)(target_params=target_params)
 
         @abstractmethod 
         def pdf(self, *args):
@@ -35,16 +38,12 @@ class Target(ABC):
             Outputs probability density at provided input.
             """
             raise NotImplementedError 
-        
-        @abstractmethod 
-        def cdf(self, *args):
-            """
-            Outputs cumulative probability at provided input.
-            """
-            raise NotImplementedError
 
         @abstractmethod
         def event_time_func(self, *args):
+            """
+            Event time function.
+            """
             raise NotImplementedError
 
 
